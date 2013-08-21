@@ -133,7 +133,8 @@ $(TTE_DIR)/all.acc :
 	echo "FEATS:\t$(FEAT_LIST)" | sed 's/,/, /g' >> $@; \
 	echo -n "INFO:\t" >> $@; \
 	echo -n "$(DATE)\t$(DATA_ID)\t`git rev-parse --abbrev-ref HEAD`:`git rev-parse HEAD | cut -c 1-10`" >> $@; \
-	echo "\t`zcat $(DATA_DIR)/train.$(DATA_ID).table | cut -f1 | sort | shasum | cut -c 1-10`\t$(D)" >> $@
+	echo -n "\t`zcat $(DATA_DIR)/train.$(DATA_ID).table | cut -f1 | sort | shasum | cut -c 1-10`\t" >> $@; \
+	echo $(FEAT_LIST) | shasum | cut -c 1-10 >> $@;
 	iter=000; \
 	cat $(ML_METHOD_LIST) | while read i ; do \
 		if [ `echo $$i | cut -c1` = "#" ]; then \
