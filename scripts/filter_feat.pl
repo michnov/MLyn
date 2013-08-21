@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use lib 'lib';
+use lib "$ENV{TMT_ROOT}/personal/mnovak/ml_framework/lib";
 use Utils;
 use Getopt::Long;
 
