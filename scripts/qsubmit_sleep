@@ -1,0 +1,4 @@
+#!/bin/bash
+
+qsubmit "${@: 1:$#-1}" > /dev/null 2>&1
+while [ ! -e ${@: -1} ]; do sleep 5; done
