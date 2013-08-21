@@ -4,6 +4,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction import DictVectorizer
+from sklearn import tree
 import cPickle
 import baseline
 
@@ -63,3 +64,8 @@ class Model:
         (self.model, self.vectorizer) = cPickle.load(f)
         f.close()
         
+    def print_params(self, file_path):
+        f = open(file_path, "w")
+        if (self.model.__class__.__name__ == "DecisionTreeClassifier"):
+            f = tree.export_graphviz(self.model, out_file=f)
+        f.close()
