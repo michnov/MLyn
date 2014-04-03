@@ -5,9 +5,7 @@ use utf8;
 use warnings;
 
 use Treex::Tool::ML::MaxEnt::Model;
-
-use lib 'lib';
-use Utils;
+use Treex::Tool::ML::TabSpace::Util;
 
 my $USAGE = <<"USAGE_END";
 Usage: $0 <max_ent_model>
@@ -30,7 +28,7 @@ while (my $line = <STDIN>) {
         printf STDERR "Resolving the data using maximum entropy model. Processed lines: %d\r", $i;
     }
 
-    my ($features, $class) = Utils::parse_line($line);
+    my ($features, $class) = Treex::Tool::ML::TabSpace::Util::parse_line($line);
     my $pred_class = $model->predict($features);
 
     print "$class\t$pred_class\n";

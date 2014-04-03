@@ -30,7 +30,7 @@ if (keys %in_hash > 0) {
 }
 
 while (<STDIN>) {
-    my ($feats, $class) = Treex::Tool::ML::TabSpace::Util::parse_line($_);
+    my ($feats, $class) = Treex::Tool::ML::TabSpace::Util::parse_line($_, {split_key_val => 1});
     print "\n" if (!defined $feats);
 
     my @filt_feats = grep { $print xor $hash{$_->[0]} } @$feats;

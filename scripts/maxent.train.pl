@@ -5,10 +5,8 @@ use utf8;
 use warnings;
 
 use Treex::Tool::ML::MaxEnt::Learner;
+use Treex::Tool::ML::TabSpace::Util;
 use Getopt::Long;
-
-use lib 'lib';
-use Utils;
 
 my $USAGE = <<"USAGE_END";
 Usage: $0 [-e <value_of_epsilon>] <resulting_model>
@@ -34,7 +32,7 @@ while (my $line = <STDIN>) {
         printf STDERR "Showing the instances to maximum entropy method. Processed lines: %d\r", $i;
     }
 
-    my ($features, $class) = Utils::parse_line($line);
+    my ($features, $class) = Treex::Tool::ML::TabSpace::Util::parse_line($line);
     $me->see($features, $class);
 }
 
