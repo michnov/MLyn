@@ -22,19 +22,16 @@ sub info {
 
 sub ml_method {
     my (@rest) = @_;
-    my @ths = map {"<th style=\"font-size: 70%\">$_</th>"} @rest;
+    my @ths = map {"<th style=\"font-size:70%\">$_</th>"} @rest;
     return "<tr>" . (join "\t", @ths) . "</tr>";
 }
 
 use Data::Dumper;
 
 sub results {
-    my ($rowspan, @rest) = @_;
-    my $rs_str = "";
-    if (defined $rowspan) {
-        $rs_str = "rowspan=\"$rowspan\"";
-    }
-    my @res = map { my @chunks = split / /, $_; \@chunks } @rest;
+    my ($rest, $tr_style) = @_;
+    $tr_style = "" if (!defined $tr_style);
+    my @res = map { my @chunks = split / /, $_; \@chunks } @$rest;
     my $max_perc = max( map {$_->[0] || 0} @res);
     my @tds = map {
         my ($perc, $ratio) = @$_;
@@ -49,9 +46,9 @@ sub results {
         if ($perc == $max_perc) {
             $color = "color: red;";
         }
-        "<td $rs_str style=\"text-align: right;$color\"><a title=\"$ratio\">$perc</a></td>"
+        "<td style=\"text-align:right; $color\"><a title=\"$ratio\">$perc</a></td>"
     } @res;
-    return "<tr>" . (join "\t", @tds) . "</p>";
+    return "<tr $tr_style>" . (join "\t", @tds) . "</tr>";
 }
 
 sub _count_rowspan {
@@ -70,9 +67,19 @@ my @lines = <STDIN>;
 my @table_lines = map {chomp $_; [split /\t/, $_]} @lines; 
 
 
+my $rowspan = 1;
+my $label;
 for (my $i = 0; $i < @table_lines; $i++) {
 
-    my ($label, @rest) = @{$table_lines[$i]};
+    my ($label_line, @rest) = @{$table_lines[$i]};
+    if ($rowspan == 1) {
+        $label = $label_line;
+        $rowspan = _count_rowspan(\@table_lines, $i);
+    }
+    else {
+        $rowspan--;
+    }
+
     if ($label eq "DATE:") {
         $html_str .= date(@rest);
     }
@@ -83,21 +90,21 @@ for (my $i = 0; $i < @table_lines; $i++) {
         $html_str .= info(@rest);
     }
     elsif ($label eq "ML_METHOD:") {
-        $html_str .= "<table>\n";
+        $html_str .= "<table style=\"border-collapse: collapse\">\n";
         $html_str .= ml_method(@rest);
     }
     elsif ($label eq "TRAIN:") {
-        my $rowspan = _count_rowspan(\@table_lines, $i);
-        $html_str .= results($rowspan, @rest);
+        my $tr_style = "";
+        if ($rowspan == 1) {
+            $tr_style = "style=\"border-style: none none solid none; border-width: 2px;\"";
+        }
+        $html_str .= results(\@rest, $tr_style);
     }
     elsif ($label eq "DEV:") {
-        my $rowspan = _count_rowspan(\@table_lines, $i);
-        $html_str .= results($rowspan, @rest);
-        $html_str .= "\n</table>";
-    }
-    elsif ($label eq "") {
-        $html_str .= results(undef, @rest);
-        $html_str .= "\n</table>";
+        $html_str .= results(\@rest);
+        if ($rowspan == 1) {
+            $html_str .= "\n</table>";
+        }
     }
     
     $html_str .= "\n";
