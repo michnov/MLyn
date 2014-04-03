@@ -207,7 +207,7 @@ $(TTE_FEATS_DIR)/all.acc :
 			touch $(TTE_FEATS_DIR)/done.$$featsha;"; \
 		sleep 30; \
 	done; \
-	featset_count=`cat $(FEATSET_LIST) | scripts/read_featset_list.pl -c`; \
+	featset_count=`cat $(FEATSET_LIST) | scripts/read_featset_list.pl | wc -l`; \
 	while [ `ls $(TTE_FEATS_DIR)/done.* 2> /dev/null | wc -l` -lt $$featset_count ]; do \
 		sleep 10; \
 	done
