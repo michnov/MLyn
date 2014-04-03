@@ -208,7 +208,7 @@ $(TTE_FEATS_DIR)/all.acc :
 			touch $(TTE_FEATS_DIR)/done.$$featsha;"; \
 		sleep 30; \
 	done
-	while [ `ls $(TTE_FEATS_DIR)/done.* 2> /dev/null | wc -l` -lt `cat $(FEATSET_LIST) | grep -v "^#" | grep -v "^[ 	]" | wc -l` ]; do \
+	while [ `ls $(TTE_FEATS_DIR)/done.* 2> /dev/null | wc -l` -lt `cat $(FEATSET_LIST) | grep -v "^#" | grep -v "^$$" | grep -v "^[ 	]" | wc -l` ]; do \
 		sleep 10; \
 	done
 	cat $(TTE_FEATS_DIR)/acc.* > $@
