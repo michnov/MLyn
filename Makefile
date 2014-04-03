@@ -60,8 +60,8 @@ endif
 ML_PARAMS_HASH = $(shell echo "$(ML_PARAMS)" | shasum | cut -c 1-5)
 ML_ID=$(ML_METHOD).$(ML_PARAMS_HASH)
 
-TRAIN_QSUBMIT=$(SCRIPT_DIR)/qsubmit_sleep --jobname="train.$(ML_ID).$(TRAIN_DATA_ID)" --mem="15g" --priority="0" --logdir="$(QSUB_LOG_DIR)" --sync
-TEST_QSUBMIT=$(SCRIPT_DIR)/qsubmit_sleep  --jobname="test.$(ML_ID).$(TEST_DATA_ID)" --mem="15g" --priority="0" --logdir="$(QSUB_LOG_DIR)" --sync
+TRAIN_QSUBMIT=$(SCRIPT_DIR)/qsubmit_sleep --jobname="train.$(ML_ID).$(TRAIN_DATA_ID)" --mem="2g" --priority="0" --logdir="$(QSUB_LOG_DIR)" --sync
+TEST_QSUBMIT=$(SCRIPT_DIR)/qsubmit_sleep  --jobname="test.$(ML_ID).$(TEST_DATA_ID)" --mem="2g" --priority="0" --logdir="$(QSUB_LOG_DIR)" --sync
 
 #VW_APP=/net/work/people/mnovak/tools/x86_64/vowpal_wabbit/vowpalwabbit/vw
 VW_APP=/net/cluster/TMP/mnovak/tools/vowpal_wabbit/vowpalwabbit/vw
@@ -190,7 +190,8 @@ $(TTE_DIR)/all.acc :
 	mkdir -p $(TTE_DIR)/model
 	mkdir -p $(TTE_DIR)/result
 	echo "$(DATA_DIR)/train.$(DATA_SOURCE).table"
-	echo -e "FEATS:\t$(FEAT_DESCR)" >> $@; \
+	echo -en "FEATS:\t$(FEAT_DESCR)" >> $@; \
+	echo -e "\t`echo $(FEAT_LIST) | sed 's/,/, /g'`" >> $@; \
 	echo -en "INFO:\t" >> $@; \
 	echo -en "$(DATE)\t$(DATA_SOURCE)\t`git rev-parse --abbrev-ref HEAD`:`git rev-parse HEAD | cut -c 1-10`" >> $@; \
 	echo -en "\t`zcat $(DATA_DIR)/train.$(DATA_SOURCE).table | cut -f1 | sort | shasum | cut -c 1-10`\t" >> $@; \

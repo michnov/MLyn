@@ -12,7 +12,7 @@ sub date {
 
 sub feats {
     my (@rest) = @_;
-    return "<h3>" . (join "\t", @rest) . "</h3>";
+    return "<h3><a title=\"". $rest[1] . "\">" . $rest[0] . "</a></h3>";
 }
 
 sub info {
