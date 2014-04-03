@@ -1,3 +1,4 @@
+SHELL:=/bin/bash
 LRC=1
 JOBS_NUM=100
 
@@ -49,6 +50,11 @@ ML_PARAMS=--passes 20
 endif
 
 ML_PARAMS_HASH = $(shell echo "$(ML_PARAMS)" | shasum | cut -c 1-5)
+ifdef CROSS_VALID_I
+CROSS_VALID_I_STR := $(shell printf "%02d" $(CROSS_VALID_I))
+ML_PARAMS_HASH := $(ML_PARAMS_HASH).$(CROSS_VALID_I_STR)
+FILTER_INST_PARAMS=--multiline $(RANKING) -n $(CROSS_VALID_N) --$(CROSS_VALID_FOLD) $(CROSS_VALID_I)
+endif
 ML_ID=$(ML_METHOD).$(ML_PARAMS_HASH)
 
 TRAIN_QSUBMIT=$(SCRIPT_DIR)/qsubmit_sleep --jobname="train.$(ML_ID).$(DATA_ID)" --mem="15g" --priority="0" --logdir="$(QSUB_LOG_DIR)" --sync
@@ -58,10 +64,10 @@ VW_APP=/net/work/people/mnovak/tools/x86_64/vowpal_wabbit/vowpalwabbit/vw
 train : $(MODEL_DIR)/$(DATA_ID).$(ML_ID).model
 
 $(MODEL_DIR)/$(DATA_ID).maxent.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$(DATA_ID).idx.table
-	$(TRAIN_QSUBMIT) 'zcat $< | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/maxent.train.pl $@' $@
+	$(TRAIN_QSUBMIT) 'zcat $< | $(SCRIPT_DIR)/filter_inst.pl $(FILTER_INST_PARAMS) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/maxent.train.pl $@' $@
 $(MODEL_DIR)/$(DATA_ID).vw.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$(DATA_ID).idx.table
 	$(TRAIN_QSUBMIT) \
-		'zcat $< | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | scripts/vw_convert.pl | gzip -c > /COMP.TMP/train.$(DATA_ID).idx.vw.table.$$$$; \
+		'zcat $< | $(SCRIPT_DIR)/filter_inst.pl $(FILTER_INST_PARAMS) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | scripts/vw_convert.pl | gzip -c > /COMP.TMP/train.$(DATA_ID).idx.vw.table.$$$$; \
 		$(VW_APP) -d /COMP.TMP/train.$(DATA_ID).idx.vw.table.$$$$ -f $@ --sequence_max_length 10000 --compressed \
 			--oaa `zcat $< | cut -f 1 | sort -n | tail -n1` $(ML_PARAMS) \
 			-c -k --cache_file /COMP.TMP/train.$(DATA_ID).idx.vw.cache.$$$$; \
@@ -69,14 +75,14 @@ $(MODEL_DIR)/$(DATA_ID).vw.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$(DATA_ID
 		rm /COMP.TMP/train.$(DATA_ID).idx.vw.cache.$$$$' $@
 $(MODEL_DIR)/$(DATA_ID).vw.ranking.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$(DATA_ID).idx.table
 	$(TRAIN_QSUBMIT) \
-		'zcat $< | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | scripts/vw_convert.pl -m | gzip -c > /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.table.$$$$; \
+		'zcat $< | $(SCRIPT_DIR)/filter_inst.pl $(FILTER_INST_PARAMS) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | scripts/vw_convert.pl -m | gzip -c > /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.table.$$$$; \
 		$(VW_APP) -d /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.table.$$$$ -f $@ --sequence_max_length 10000 --compressed \
 			--csoaa_ldf m $(ML_PARAMS) \
 			-c -k --cache_file /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.cache.$$$$; \
 		rm /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.table.$$$$; \
 		rm /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.cache.$$$$' $@
 $(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$(DATA_ID).idx.table
-	$(TRAIN_QSUBMIT) 'zcat $< | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.train.py $* "$(ML_PARAMS)" $@' $@
+	$(TRAIN_QSUBMIT) 'zcat $< | $(SCRIPT_DIR)/filter_inst.pl $(FILTER_INST_PARAMS) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.train.py $* "$(ML_PARAMS)" $@' $@
 
 clean_train:
 	-rm $(MODEL_DIR)/$(DATA_ID).$(ML_ID).model
@@ -90,25 +96,25 @@ test_dev : $(RESULT_DIR)/dev.$(DATA_ID).$(ML_ID).res
 test_train : $(RESULT_DIR)/train.$(DATA_ID).$(ML_ID).res
 
 $(RESULT_DIR)/%.$(DATA_ID).maxent.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).maxent.$(ML_PARAMS_HASH).model $(DATA_DIR)/%.$(DATA_ID).idx.table
-	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/maxent.test.pl $< > $@' $@
+	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_inst.pl $(FILTER_INST_PARAMS) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/maxent.test.pl $< > $@' $@
 $(RESULT_DIR)/%.$(DATA_ID).vw.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).vw.$(ML_PARAMS_HASH).model $(DATA_DIR)/%.$(DATA_ID).idx.table
 	$(TEST_QSUBMIT) \
-		'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | scripts/vw_convert.pl --test | gzip -c > /COMP.TMP/$*.$(DATA_ID).idx.vw.table.$$$$; \
+		'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_inst.pl $(FILTER_INST_PARAMS) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | scripts/vw_convert.pl --test | gzip -c > /COMP.TMP/$*.$(DATA_ID).idx.vw.table.$$$$; \
 		zcat /COMP.TMP/$*.$(DATA_ID).idx.vw.table.$$$$ | $(VW_APP) -t -i $< -p /COMP.TMP/$*.$(DATA_ID).vw.res.tmp.$$$$ --sequence_max_length 10000; \
 		rm /COMP.TMP/$*.$(DATA_ID).idx.vw.table.$$$$; \
 		perl -pe '\''$$_ =~ s/^(.*?)\..*? (.*?)$$/$$2\t$$1/;'\'' < /COMP.TMP/$*.$(DATA_ID).vw.res.tmp.$$$$ > $@; \
 		rm /COMP.TMP/$*.$(DATA_ID).vw.res.tmp.$$$$' $@
 $(RESULT_DIR)/%.$(DATA_ID).vw.ranking.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).vw.ranking.$(ML_PARAMS_HASH).model $(DATA_DIR)/%.$(DATA_ID).idx.table
 	$(TEST_QSUBMIT) \
-		'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | scripts/vw_convert.pl -m | gzip -c > /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$$$; \
+		'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_inst.pl $(FILTER_INST_PARAMS) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | scripts/vw_convert.pl -m | gzip -c > /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$$$; \
 		zcat /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$$$ | $(VW_APP) -t -i $< -p $@ --sequence_max_length 10000; \
 		rm /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$$$' $@
 $(RESULT_DIR)/train.$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model $(DATA_DIR)/train.$(DATA_ID).idx.table
-	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
+	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_inst.pl $(FILTER_INST_PARAMS) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
 $(RESULT_DIR)/dev.$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model $(DATA_DIR)/dev.$(DATA_ID).idx.table
-	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
+	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_inst.pl $(FILTER_INST_PARAMS) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
 $(RESULT_DIR)/eval.$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model $(DATA_DIR)/eval.$(DATA_ID).idx.table
-	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
+	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_inst.pl $(FILTER_INST_PARAMS) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
 
 clean_test:
 	-rm $(RESULT_DIR)/*.$(DATA_ID).$(ML_ID).res
@@ -212,6 +218,21 @@ $(TTE_FEATS_DIR)/all.acc :
 		sleep 10; \
 	done
 	cat $(TTE_FEATS_DIR)/acc.* > $@
+
+#--------------------------------- N-fold cross validation -------------------------------------
+
+CROSS_VALID_N=10
+
+#			"echo \"$$ml_method $$ml_params\" >> $(TTE_DIR)/acc.$$iter.$$ml_id;"
+
+cross_eval_% : $(DATA_DIR)/%.$(DATA_ID).idx.table
+	for (( i=0; i<$(CROSS_VALID_N); i++ )); do \
+		cross_ml_id=$(ML_ID).`printf "%02d\n" $$i`; \
+		qsubmit --jobname="tte.$$cross_ml_id" --mem="1g" --priority="0" --logdir="$(TTE_DIR)/log/$$cross_ml_id" \
+			"make -s test_train CROSS_VALID_N=$(CROSS_VALID_N) CROSS_VALID_I=$$i CROSS_VALID_FOLD=out RANKING=$(RANKING) DATA_ID=$(DATA_ID) ML_METHOD=$(ML_METHOD) ML_PARAMS=\"$(ML_PARAMS)\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(TTE_DIR)/model RESULT_DIR=$(TTE_DIR)/result QSUB_LOG_DIR=$(TTE_DIR)/log/$$cross_ml_id; \
+			 make -s test_train CROSS_VALID_N=$(CROSS_VALID_N) CROSS_VALID_I=$$i CROSS_VALID_FOLD=in RANKING=$(RANKING) DATA_ID=$(DATA_ID) ML_METHOD=$(ML_METHOD) ML_PARAMS=\"$(ML_PARAMS)\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(TTE_DIR)/model RESULT_DIR=$(TTE_DIR)/result QSUB_LOG_DIR=$(TTE_DIR)/log/$$cross_ml_id; \
+			 touch $(TTE_DIR)/done.$$cross_ml_id;"; \
+	done
 
 publish_results_html :
 	scp $(STATS_FILE).html mnovak@ufal:/home/mnovak/public_html/data/it_transl_res.html
