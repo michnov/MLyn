@@ -186,10 +186,10 @@ $(TTE_DIR)/all.acc :
 	mkdir -p $(TTE_DIR)/model
 	mkdir -p $(TTE_DIR)/result
 	echo "$(DATA_DIR)/train.$(DATA_SOURCE).table"
-	echo "FEATS:\t$(FEAT_DESCR)" >> $@; \
-	echo -n "INFO:\t" >> $@; \
-	echo -n "$(DATE)\t$(DATA_SOURCE)\t`git rev-parse --abbrev-ref HEAD`:`git rev-parse HEAD | cut -c 1-10`" >> $@; \
-	echo -n "\t`zcat $(DATA_DIR)/train.$(DATA_SOURCE).table | cut -f1 | sort | shasum | cut -c 1-10`\t" >> $@; \
+	echo -e "FEATS:\t$(FEAT_DESCR)" >> $@; \
+	echo -en "INFO:\t" >> $@; \
+	echo -en "$(DATE)\t$(DATA_SOURCE)\t`git rev-parse --abbrev-ref HEAD`:`git rev-parse HEAD | cut -c 1-10`" >> $@; \
+	echo -en "\t`zcat $(DATA_DIR)/train.$(DATA_SOURCE).table | cut -f1 | sort | shasum | cut -c 1-10`\t" >> $@; \
 	echo $(FEAT_LIST) | shasum | cut -c 1-10 >> $@;
 	iter=000; \
 	cat $(ML_METHOD_LIST) $(RANKING_GREP) | grep -v "^#" | while read i ; do \
@@ -219,7 +219,7 @@ $(TTE_DIR)/all.acc :
 	#-rm -rf $(TTE_DIR)
 
 tte_feats : $(TTE_FEATS_DIR)/all.acc
-	echo "DATE:\t$(DATE)" >> $(STATS_FILE)
+	echo -e "DATE:\t$(DATE)" >> $(STATS_FILE)
 	cat $< >> $(STATS_FILE)
 	cat $(STATS_FILE) | scripts/result_to_html.pl > $(STATS_FILE).html
 $(TTE_FEATS_DIR)/all.acc :
@@ -232,7 +232,7 @@ $(TTE_FEATS_DIR)/all.acc :
 		feat_descr=`echo "$$i" | sed 's/^[^#]*#//' | sed 's/__WS__/ /g'`; \
 		featsha=`echo "$$feat_list" | shasum | cut -c 1-10`; \
 		qsubmit --jobname="tte_feats.$$featsha" --mem="1g" --priority="0" --logdir="$(TTE_FEATS_DIR)/log/$$featsha" \
-			"make -s tte RANKING=$(RANKING) DATA_SOURCE=$(DATA_SOURCE) STATS_FILE=$(TTE_FEATS_DIR)/acc.$$iter.$$featsha DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_FEATS_DIR)/$$featsha FEAT_LIST=$$feat_list FEAT_DESCR=\"$$feat_descr\"; \
+			"make -s tte RANKING=$(RANKING) CROSS_VALID_N=$(CROSS_VALID_N) DATA_SOURCE=$(DATA_SOURCE) STATS_FILE=$(TTE_FEATS_DIR)/acc.$$iter.$$featsha DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_FEATS_DIR)/$$featsha FEAT_LIST=$$feat_list FEAT_DESCR=\"$$feat_descr\"; \
 			touch $(TTE_FEATS_DIR)/done.$$featsha;"; \
 		sleep 30; \
 	done; \
