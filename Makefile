@@ -102,7 +102,7 @@ $(MODEL_DIR)/$(TRAIN_DATA_ID).vw.ranking.$(ML_PARAMS_HASH).model : $(TRAIN_SET)
 	$(TRAIN_QSUBMIT) \
 		'zcat $< | $(SCRIPT_DIR)/filter_inst.pl $(FILTER_INST_PARAMS) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | scripts/vw_convert.pl -m | gzip -c > /COMP.TMP/$(TRAIN_DATA_ID).idx.vw.ranking.table.$$$$; \
 		$(VW_APP) -d /COMP.TMP/$(TRAIN_DATA_ID).idx.vw.ranking.table.$$$$ -f $@ --sequence_max_length 10000 --compressed \
-			--csoaa_ldf m $(ML_PARAMS) \
+			--csoaa_ldf $(ML_PARAMS) \
 			-c -k --cache_file /COMP.TMP/$(TRAIN_DATA_ID).idx.vw.ranking.cache.$$$$; \
 		rm /COMP.TMP/$(TRAIN_DATA_ID).idx.vw.ranking.table.$$$$; \
 		rm /COMP.TMP/$(TRAIN_DATA_ID).idx.vw.ranking.cache.$$$$' $@
