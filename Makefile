@@ -201,28 +201,16 @@ $(TTE_DIR)/all.acc :
 		ml_id=$$ml_method.$$ml_params_hash; \
 		mkdir -p $(TTE_DIR)/log/$$ml_id; \
 		if [ $(CROSS_VALID_N) -gt 0 ]; then \
-			echo "$$ml_method $$ml_params" >> $(TTE_DIR)/acc.$$iter.$$ml_id; \
-			for (( i=0; i<$(CROSS_VALID_N); i++ )); do \
-				cross_ml_id=$$ml_id.cv_`printf "%02d\n" $$i`; \
-				qsubmit --jobname="tte.$$cross_ml_id" --mem="1g" --priority="0" --logdir="$(TTE_DIR)/log/$$cross_ml_id" \
-					"make -s test CROSS_VALID_N=$(CROSS_VALID_N) CROSS_VALID_I=$$i CROSS_VALID_FOLD=out TRAIN_DATA_NAME=train DATA_SOURCE=$(DATA_SOURCE) RANKING=$(RANKING) ML_METHOD=$$ml_method ML_PARAMS=\"$$ml_params\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(TTE_DIR)/model RESULT_DIR=$(TTE_DIR)/result QSUB_LOG_DIR=$(TTE_DIR)/log/$$cross_ml_id; \
-					 make -s test CROSS_VALID_N=$(CROSS_VALID_N) CROSS_VALID_I=$$i CROSS_VALID_FOLD=in  TRAIN_DATA_NAME=train DATA_SOURCE=$(DATA_SOURCE) RANKING=$(RANKING) ML_METHOD=$$ml_method ML_PARAMS=\"$$ml_params\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(TTE_DIR)/model RESULT_DIR=$(TTE_DIR)/result QSUB_LOG_DIR=$(TTE_DIR)/log/$$cross_ml_id; \
-					 touch $(TTE_DIR)/done_cv.$$cross_ml_id;"; \
-			done; \
-			while [ `ls $(TTE_DIR)/done_cv.$$ml_id.* 2> /dev/null | wc -l` -lt $(CROSS_VALID_N) ]; do \
-				sleep 2; \
-			done; \
-			cat $(TTE_DIR)/result/train.$(DATA_SOURCE).cv_out_[0-9][0-9].$$ml_id.res | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG) >> $(TTE_DIR)/acc.$$iter.$$ml_id; \
-			cat $(TTE_DIR)/result/train.$(DATA_SOURCE).cv_in_[0-9][0-9].$$ml_id.res | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG) >> $(TTE_DIR)/acc.$$iter.$$ml_id; \
-			touch $(TTE_DIR)/done.$$ml_id; \
+			qsubmit --jobname="tte.cv.$$ml_id" --mem="1g" --priority="0" --logdir="$(TTE_DIR)/log/$$ml_id" \
+				"make -s cross_eval CROSS_VALID_N=$(CROSS_VALID_N) DATA_SOURCE=$(DATA_SOURCE) RANKING=$(RANKING) ML_METHOD=$$ml_method ML_PARAMS=\"$$ml_params\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_DIR) STATS_FILE=$(TTE_DIR)/acc.$$iter.$$ml_id;"; \
 		else \
 			qsubmit --jobname="tte.$$ml_id" --mem="1g" --priority="0" --logdir="$(TTE_DIR)/log/$$ml_id" \
 				"echo \"$$ml_method $$ml_params\" >> $(TTE_DIR)/acc.$$iter.$$ml_id; \
 				make -s eval DATA_SOURCE=$(DATA_SOURCE) TRAIN_DATA_NAME=train TEST_DATA_NAME=train RANKING=$(RANKING) ML_METHOD=$$ml_method ML_PARAMS=\"$$ml_params\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(TTE_DIR)/model RESULT_DIR=$(TTE_DIR)/result QSUB_LOG_DIR=$(TTE_DIR)/log/$$ml_id >> $(TTE_DIR)/acc.$$iter.$$ml_id; \
 				make -s eval DATA_SOURCE=$(DATA_SOURCE) TRAIN_DATA_NAME=train TEST_DATA_NAME=dev   RANKING=$(RANKING) ML_METHOD=$$ml_method ML_PARAMS=\"$$ml_params\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(TTE_DIR)/model RESULT_DIR=$(TTE_DIR)/result QSUB_LOG_DIR=$(TTE_DIR)/log/$$ml_id >> $(TTE_DIR)/acc.$$iter.$$ml_id; \
 				touch $(TTE_DIR)/done.$$ml_id;"; \
-			sleep 2; \
 		fi; \
+		sleep 2; \
 	done
 	while [ `ls $(TTE_DIR)/done.* 2> /dev/null | wc -l` -lt `cat $(ML_METHOD_LIST) $(RANKING_GREP) | grep -v "^#" | wc -l` ]; do \
 		sleep 5; \
@@ -259,14 +247,21 @@ $(TTE_FEATS_DIR)/all.acc :
 
 #			"echo \"$$ml_method $$ml_params\" >> $(TTE_DIR)/acc.$$iter.$$ml_id;"
 
-cross_eval : $(DATA_DIR)/train.$(DATA_SOURCE).idx.table
+cross_eval :
+	echo "$(ML_METHOD) $(ML_PARAMS)" >> $(STATS_FILE); \
 	for (( i=0; i<$(CROSS_VALID_N); i++ )); do \
-		cross_ml_id=$(ML_ID).`printf "%02d\n" $$i`; \
+		cross_ml_id=$(ML_ID).cv_`printf "%02d" $$i`; \
 		qsubmit --jobname="tte.$$cross_ml_id" --mem="1g" --priority="0" --logdir="$(TTE_DIR)/log/$$cross_ml_id" \
 			"make -s test CROSS_VALID_N=$(CROSS_VALID_N) CROSS_VALID_I=$$i CROSS_VALID_FOLD=out TRAIN_DATA_NAME=train DATA_SOURCE=$(DATA_SOURCE) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS=\"$(ML_PARAMS)\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(TTE_DIR)/model RESULT_DIR=$(TTE_DIR)/result QSUB_LOG_DIR=$(TTE_DIR)/log/$$cross_ml_id; \
 			 make -s test CROSS_VALID_N=$(CROSS_VALID_N) CROSS_VALID_I=$$i CROSS_VALID_FOLD=in  TRAIN_DATA_NAME=train DATA_SOURCE=$(DATA_SOURCE) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS=\"$(ML_PARAMS)\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(TTE_DIR)/model RESULT_DIR=$(TTE_DIR)/result QSUB_LOG_DIR=$(TTE_DIR)/log/$$cross_ml_id; \
-			 touch $(TTE_DIR)/done.$$cross_ml_id;"; \
-	done
+			 touch $(TTE_DIR)/done_cv.$$cross_ml_id;"; \
+	done; \
+	while [ `ls $(TTE_DIR)/done_cv.$(ML_ID).* 2> /dev/null | wc -l` -lt $(CROSS_VALID_N) ]; do \
+		sleep 2; \
+	done; \
+	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).cv_out_[0-9][0-9].$(ML_ID).res | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG) >> $(STATS_FILE); \
+	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).cv_in_[0-9][0-9].$(ML_ID).res | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG) >> $(STATS_FILE); \
+	touch $(TTE_DIR)/done.$(ML_ID)
 
 publish_results_html :
 	scp $(STATS_FILE).html mnovak@ufal:/home/mnovak/public_html/data/it_transl_res.html
