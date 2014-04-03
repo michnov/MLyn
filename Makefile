@@ -195,9 +195,9 @@ $(TTE_DIR)/all.acc :
 	echo -en "INFO:\t" >> $@; \
 	echo -en "$(DATE)\t$(DATA_SOURCE)\t`git rev-parse --abbrev-ref HEAD`:`git rev-parse HEAD | cut -c 1-10`" >> $@; \
 	echo -en "\t`zcat $(DATA_DIR)/train.$(DATA_SOURCE).table | cut -f1 | sort | shasum | cut -c 1-10`\t" >> $@; \
-	echo -n $(FEAT_LIST) | shasum | cut -c 1-10 >> $@;
+	echo -n `echo $(FEAT_LIST) | shasum | cut -c 1-10` >> $@; \
 	if [ $(CROSS_VALID_N) -gt 0 ]; then \
-		echo "cross-validation=$(CROSS_VALID_N)" >> $@;
+		echo -e "\tcross-validation=$(CROSS_VALID_N)" >> $@; \
 	else \
 		echo >> $@; \
 	fi; \

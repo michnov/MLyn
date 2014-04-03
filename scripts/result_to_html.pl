@@ -7,7 +7,12 @@ use List::Util qw/max/;
 
 sub date {
     my (@rest) = @_;
-    return "<h1>" . (join "\t", @rest) . "</h1>";
+    my $str = "<h1>" . shift @rest;
+    if (@rest) {
+        $str .= "<span style=\"font-size:50%; color:DarkGreen; left:-20px\">". (join "\t", @rest) ."</span>";
+    }
+    $str .= "</h1>";
+    return $str;
 }
 
 sub feats {
