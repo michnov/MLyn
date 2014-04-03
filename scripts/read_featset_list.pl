@@ -3,8 +3,6 @@
 use strict;
 use warnings;
 
-use Getopt::Long;
-
 sub print_line {
     my ($feats, $feat_descr) = @_;
 
@@ -45,13 +43,6 @@ sub extract_info {
     return ($feat_name, $str);
 }
 
-my $is_featset_count;
-GetOptions(
-    "count|c" => \$is_featset_count,
-);
-
-my $f_count = 0;
-
 my %named_featsets = ();
 
 my $curr_feat_str = undef;
@@ -71,43 +62,31 @@ while (<STDIN>) {
         next;
     }
     
-    if ($is_featset_count) {
-        if ($experiments_section && $_ !~ /^\s/) {
-            $f_count++;
-        }
+    if ($_ =~ /^\s+(\S.*)$/) {
+        $curr_feat_str .= " " . $1;
     }
     else {
-        if ($_ =~ /^\s+(\S.*)$/) {
-            $curr_feat_str .= " " . $1;
-        }
-        else {
-            if (defined $curr_feat_str) {
-                my @feats = featstr_to_list($curr_feat_str);
-                @feats = replace_featset_refs(\@feats, \%named_featsets);
-                if (defined $feat_name) {
-                    $named_featsets{$feat_name} = \@feats;
-                }
-                if ($experiments_section) {
-                    print_line(\@feats, $feat_descr);
-                }
+        if (defined $curr_feat_str) {
+            my @feats = featstr_to_list($curr_feat_str);
+            @feats = replace_featset_refs(\@feats, \%named_featsets);
+            if (defined $feat_name) {
+                $named_featsets{$feat_name} = \@feats;
             }
-            if ($_ eq "<<<EXPERIMENTS>>>") {
-                $experiments_section = 1;
-                $curr_feat_str = undef;
-                next;
+            if ($experiments_section) {
+                print_line(\@feats, $feat_descr);
             }
-            ($feat_name, $feat_descr) = extract_info($prev_comment);
-            $curr_feat_str = $_;
         }
+        if ($_ eq "<<<EXPERIMENTS>>>") {
+            $experiments_section = 1;
+            $curr_feat_str = undef;
+            next;
+        }
+        ($feat_name, $feat_descr) = extract_info($prev_comment);
+        $curr_feat_str = $_;
     }
 }
-if ($is_featset_count) {
-    print "$f_count\n";
-}
-else {
-    my @feats = featstr_to_list($curr_feat_str);
-    @feats = replace_featset_refs(\@feats, \%named_featsets);
-    if ($experiments_section) {
-        print_line(\@feats, $feat_descr);
-    }
+my @feats = featstr_to_list($curr_feat_str);
+@feats = replace_featset_refs(\@feats, \%named_featsets);
+if ($experiments_section) {
+    print_line(\@feats, $feat_descr);
 }
