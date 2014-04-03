@@ -195,7 +195,12 @@ $(TTE_DIR)/all.acc :
 	echo -en "INFO:\t" >> $@; \
 	echo -en "$(DATE)\t$(DATA_SOURCE)\t`git rev-parse --abbrev-ref HEAD`:`git rev-parse HEAD | cut -c 1-10`" >> $@; \
 	echo -en "\t`zcat $(DATA_DIR)/train.$(DATA_SOURCE).table | cut -f1 | sort | shasum | cut -c 1-10`\t" >> $@; \
-	echo $(FEAT_LIST) | shasum | cut -c 1-10 >> $@;
+	echo -n $(FEAT_LIST) | shasum | cut -c 1-10 >> $@;
+	if [ $(CROSS_VALID_N) -gt 0 ]; then \
+		echo "cross-validation=$(CROSS_VALID_N)" >> $@;
+	else \
+		echo >> $@; \
+	fi; \
 	iter=000; \
 	cat $(ML_METHOD_LIST) $(RANKING_GREP) | grep -v "^#" | while read i ; do \
 		iter=`perl -e 'my $$x = shift @ARGV; $$x++; printf "%03s", $$x;' $$iter`; \
@@ -224,7 +229,7 @@ $(TTE_DIR)/all.acc :
 	#-rm -rf $(TTE_DIR)
 
 tte_feats : $(TTE_FEATS_DIR)/all.acc
-	echo -e "DATE:\t$(DATE)" >> $(STATS_FILE)
+	echo -e "DATE:\t$(DATE)\t$(DESC)" >> $(STATS_FILE)
 	cat $< >> $(STATS_FILE)
 	cat $(STATS_FILE) | scripts/result_to_html.pl > $(STATS_FILE).html
 $(TTE_FEATS_DIR)/all.acc :
