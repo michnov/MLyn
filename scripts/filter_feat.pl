@@ -3,8 +3,7 @@
 use strict;
 use warnings;
 
-use lib "$ENV{TMT_ROOT}/personal/mnovak/ml_framework/lib";
-use Utils;
+use Treex::Tool::ML::TabSpace::Util;
 use Getopt::Long;
 
 my $in = '';
@@ -30,10 +29,12 @@ if (keys %in_hash > 0) {
     print $_ while (<STDIN>);
 }
 
-
 while (<STDIN>) {
-    my ($feats, $class) = Utils::parse_line($_);
+    my ($feats, $class) = Treex::Tool::ML::TabSpace::Util::parse_line($_);
+    print "\n" if (!defined $feats);
 
-    my @filt_feats = grep { $print xor $hash{(split /=/, $_)[0]} } @$feats;
-    print "$class\t" . (join " ", @filt_feats) . "\n";
+    my @filt_feats = grep { $print xor $hash{$_->[0]} } @$feats;
+    next if (!@filt_feats);
+    my $str = Treex::Tool::ML::TabSpace::Util::format_line(\@filt_feats, $class);
+    print $str;
 }
