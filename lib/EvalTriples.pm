@@ -157,7 +157,7 @@ sub eval {
 
 sub _format_perc {
     my ($x) = @_;
-    return sprintf("%.2f%%", $x * 100);
+    return sprintf("%.2f", $x * 100);
 }
 sub _format_ratio {
     my ($x, $y) = @_;

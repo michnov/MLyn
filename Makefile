@@ -68,11 +68,6 @@ $(MODEL_DIR)/$(DATA_ID).vw.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$(DATA_ID
 			-c -k --cache_file /COMP.TMP/train.$(DATA_ID).idx.vw.cache.$$hash; \
 		rm /COMP.TMP/train.$(DATA_ID).idx.vw.table.$$hash; \
 		rm /COMP.TMP/train.$(DATA_ID).idx.vw.cache.$$hash' $@
-$(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$(DATA_ID).idx.table
-	$(TRAIN_QSUBMIT) 'zcat $< | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.train.py $* "$(ML_PARAMS)" $@' $@
-
-################ RANKING ##################
-
 $(MODEL_DIR)/$(DATA_ID).vw.ranking.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$(DATA_ID).idx.table
 	$(TRAIN_QSUBMIT) \
 		'hash=`date | shasum | cut -c 1-5`; \
@@ -82,6 +77,8 @@ $(MODEL_DIR)/$(DATA_ID).vw.ranking.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$
 			-c -k --cache_file /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.cache.$$hash; \
 		rm /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.table.$$hash; \
 		rm /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.cache.$$hash' $@
+$(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$(DATA_ID).idx.table
+	$(TRAIN_QSUBMIT) 'zcat $< | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.train.py $* "$(ML_PARAMS)" $@' $@
 
 clean_train:
 	-rm $(MODEL_DIR)/$(DATA_ID).$(ML_ID).model
@@ -108,11 +105,8 @@ $(RESULT_DIR)/%.$(DATA_ID).vw.ranking.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DAT
 	$(TEST_QSUBMIT) \
 		'hash=`date | shasum | cut -c 1-5`; \
 		zcat $(word 2,$^) | scripts/vw_convert.pl -m | gzip -c > /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$hash; \
-		zcat /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$hash | $(VW_APP) -t -i $< -p /COMP.TMP/$*.$(DATA_ID).vw.res.tmp.$$hash --sequence_max_length 10000; \
-		rm /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$hash; \
-		cat /COMP.TMP/$*.$(DATA_ID).vw.ranking.res.tmp.$$hash > $@; \
-		rm /COMP.TMP/$*.$(DATA_ID).vw.ranking.res.tmp.$$hash' $@
-
+		zcat /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$hash | $(VW_APP) -t -i $< -p $@ --sequence_max_length 10000; \
+		rm /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$hash' $@
 $(RESULT_DIR)/train.$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model $(DATA_DIR)/train.$(DATA_ID).idx.table
 	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
 $(RESULT_DIR)/dev.$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model $(DATA_DIR)/dev.$(DATA_ID).idx.table
@@ -125,9 +119,14 @@ clean_test:
 
 #----------------------------------------- EVAL --------------------------------------------------------------
 
+ifeq ($(RANKING),1)
+RANK_FLAG=--ranking
+RANK_EVAL_FLAG=--acc --prf
+endif
+
 eval : eval_dev
 eval_% : $(RESULT_DIR)/%.$(DATA_ID).$(ML_ID).res
-	$(SCRIPT_DIR)/eval.pl < $<
+	cat $< | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG)
 
 #---------------------------------------- CLEAN -------------------------------------------------------
 
@@ -142,7 +141,9 @@ STATS_FILE=results
 ML_METHOD_LIST=$(CONF_DIR)/ml_methods
 FEATSET_LIST=$(CONF_DIR)/featset_list
 RESULT_TEMPLATE=$(CONF_DIR)/result.template
-
+ifeq ($(RANKING),1)
+RESULT_TEMPLATE=$(CONF_DIR)/result.ranking.template
+endif
 
 #--------------------------------- train, test, eval for all metnods -------------------------------------
 

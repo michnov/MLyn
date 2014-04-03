@@ -29,7 +29,11 @@ sub ml_method {
 use Data::Dumper;
 
 sub results {
-    my (@rest) = @_;
+    my ($rowspan, @rest) = @_;
+    my $rs_str = "";
+    if (defined $rowspan) {
+        $rs_str = "rowspan=\"$rowspan\"";
+    }
     my @res = map { my @chunks = split / /, $_; \@chunks } @rest;
     my $max_perc = max( map {$_->[0] || 0} @res);
     my @tds = map {
@@ -38,21 +42,37 @@ sub results {
             $perc = 0;
             $ratio = "()";
         }
+        if (!defined $ratio) {
+            $ratio = "";
+        }
         my $color = "";
         if ($perc == $max_perc) {
             $color = "color: red;";
         }
-        "<td style=\"text-align: right;$color\"><a title=\"$ratio\">$perc</a></td>"
+        "<td $rs_str style=\"text-align: right;$color\"><a title=\"$ratio\">$perc</a></td>"
     } @res;
     return "<tr>" . (join "\t", @tds) . "</p>";
 }
 
+sub _count_rowspan {
+    my ($lines, $i) = @_;
+
+    my $span = 1;
+    while (defined $lines->[$i+$span] && $lines->[$i+$span][0] =~ /^\s*$/) {
+        $span++;
+    }
+    return $span;
+}
+
 my $html_str = "";
 
-while (<STDIN>) {
-    chomp $_;
+my @lines = <STDIN>;
+my @table_lines = map {chomp $_; [split /\t/, $_]} @lines; 
 
-    my ($label, @rest) = split /\t/, $_;
+
+for (my $i = 0; $i < @table_lines; $i++) {
+
+    my ($label, @rest) = @{$table_lines[$i]};
     if ($label eq "DATE:") {
         $html_str .= date(@rest);
     }
@@ -67,10 +87,16 @@ while (<STDIN>) {
         $html_str .= ml_method(@rest);
     }
     elsif ($label eq "TRAIN:") {
-        $html_str .= results(@rest);
+        my $rowspan = _count_rowspan(\@table_lines, $i);
+        $html_str .= results($rowspan, @rest);
     }
     elsif ($label eq "DEV:") {
-        $html_str .= results(@rest);
+        my $rowspan = _count_rowspan(\@table_lines, $i);
+        $html_str .= results($rowspan, @rest);
+        $html_str .= "\n</table>";
+    }
+    elsif ($label eq "") {
+        $html_str .= results(undef, @rest);
         $html_str .= "\n</table>";
     }
     
