@@ -168,10 +168,7 @@ $(TTE_DIR)/all.acc :
 	echo -n "\t`zcat $(DATA_DIR)/train.$(DATA_ID).table | cut -f1 | sort | shasum | cut -c 1-10`\t" >> $@; \
 	echo $(FEAT_LIST) | shasum | cut -c 1-10 >> $@;
 	iter=000; \
-	cat $(ML_METHOD_LIST) $(RANKING_GREP) | while read i ; do \
-		if [ `echo $$i | cut -c1` = "#" ]; then \
-			continue; \
-		fi; \
+	cat $(ML_METHOD_LIST) $(RANKING_GREP) | grep -v "^#" | while read i ; do \
 		iter=`perl -e 'my $$x = shift @ARGV; $$x++; printf "%03s", $$x;' $$iter`; \
 		ml_method=`echo $$i | cut -f1 -d':'`; \
 		ml_params="`echo $$i | cut -f2 -d':'`"; \
@@ -186,7 +183,7 @@ $(TTE_DIR)/all.acc :
 			touch $(TTE_DIR)/done.$$ml_id;"; \
 		sleep 2; \
 	done
-	while [ `ls $(TTE_DIR)/done.* 2> /dev/null | wc -l` -lt `cat $(ML_METHOD_LIST) $(RANKING_GREP) | wc -l` ]; do \
+	while [ `ls $(TTE_DIR)/done.* 2> /dev/null | wc -l` -lt `cat $(ML_METHOD_LIST) $(RANKING_GREP) | grep -v "^#" | wc -l` ]; do \
 		sleep 5; \
 	done
 	paste $(RESULT_TEMPLATE) $(TTE_DIR)/acc.* >> $@
@@ -203,10 +200,10 @@ $(TTE_FEATS_DIR)/all.acc :
 	for i in `cat $(FEATSET_LIST) | scripts/read_featset_list.pl`; do \
 		iter=`perl -e 'my $$x = shift @ARGV; $$x++; printf "%03s", $$x;' $$iter`; \
 		feat_list=`echo "$$i" | cut -d"#" -f1`; \
-		feat_descr=`echo "$$i`" | sed 's/^[^#]*#//' | sed 's/__WS__/ /g'`; \
+		feat_descr=`echo "$$i" | sed 's/^[^#]*#//' | sed 's/__WS__/ /g'`; \
 		featsha=`echo "$$feat_list" | shasum | cut -c 1-10`; \
 		qsubmit --jobname="tte_feats.$$featsha" --mem="1g" --priority="0" --logdir="$(TTE_FEATS_DIR)/log/$$featsha" \
-			"make -s tte RANKING=$(RANKING) DATA_ID=$(DATA_ID) STATS_FILE=$(TTE_FEATS_DIR)/acc.$$iter.$$featsha DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_FEATS_DIR)/$$featsha FEAT_LIST=$$feat_list FEAT_DESCR="\""$$feat_descr"\"; \
+			"make -s tte RANKING=$(RANKING) DATA_ID=$(DATA_ID) STATS_FILE=$(TTE_FEATS_DIR)/acc.$$iter.$$featsha DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_FEATS_DIR)/$$featsha FEAT_LIST=$$feat_list FEAT_DESCR=\"$$feat_descr\"; \
 			touch $(TTE_FEATS_DIR)/done.$$featsha;"; \
 		sleep 30; \
 	done
