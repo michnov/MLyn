@@ -3,17 +3,33 @@
 use warnings;
 use strict;
 
-#binmode STDIN, ":utf8";
+use Getopt::Long;
+use EvalTriples;
 
-my $total = 0;
-my $eq = 0;
+my $TYPE = "lenient";
 
-while (<STDIN>) {
-    chomp $_;
-    my ($true, $pred) = split /\s/, $_;
+my $print_acc = 0;
+my $print_prf = 0;
+GetOptions(
+    "acc" => \$print_acc,
+    "prf" => \$print_prf,
+);
+$print_acc = 1 if (!$print_acc && !$print_prf);
 
-    $total++;
-    $eq += ($true eq $pred ? 1 : 0);
+my $args = {
+    acc => $print_acc,
+    prf => $print_prf,
+    $TYPE => 1,
+    format => 1
+};
+my $stats = EvalTriples::eval(*STDIN, $args);
+
+if ($print_acc) {
+    print join(" ", @{$stats->{acc}{$TYPE}}) . "\n";
 }
-
-printf "%.2f (%d/%d)\n", ($eq / $total) * 100, $eq, $total;
+if ($print_prf) {
+    my @prf_strs = @{$stats->{prf}{$TYPE}};
+    print join(" ", @prf_strs[0 .. 1]) . "\n";
+    print join(" ", @prf_strs[2 .. 3]) . "\n";
+    print join(" ", ($prf_strs[4], "")) . "\n";
+}
