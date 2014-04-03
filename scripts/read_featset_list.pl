@@ -28,7 +28,7 @@ sub featstr_to_list {
 
 sub replace_featset_refs {
     my ($feats, $named_featsets) = @_;
-    return map { if ($_ =~ /^@(.*)$/) { @{$named_featsets->{$1}} } else {$_} } @$feats;
+    return map { if ($_ =~ /^@(.*)$/) { @{$named_featsets->{$1}{feats}} } else {$_} } @$feats;
 }
 
 sub extract_info {
@@ -61,32 +61,34 @@ while (<STDIN>) {
         $prev_comment = undef;
         next;
     }
-    
-    if ($_ =~ /^\s+(\S.*)$/) {
-        $curr_feat_str .= " " . $1;
+
+    if ($experiments_section) {
+        use Data::Dumper;
+        my ($featset_name) = featstr_to_list($_);
+        my $featset_descr = $named_featsets{$featset_name}{descr};
+        my @feats = replace_featset_refs([ "@".$featset_name ], \%named_featsets);
+        print_line(\@feats, $featset_descr);
     }
     else {
-        if (defined $curr_feat_str) {
-            my @feats = featstr_to_list($curr_feat_str);
-            @feats = replace_featset_refs(\@feats, \%named_featsets);
-            if (defined $feat_name) {
-                $named_featsets{$feat_name} = \@feats;
+        if ($_ =~ /^\s+(\S.*)$/) {
+            $curr_feat_str .= " " . $1;
+        }
+        else {
+            if (defined $curr_feat_str) {
+                my @feats = featstr_to_list($curr_feat_str);
+                @feats = replace_featset_refs(\@feats, \%named_featsets);
+                $named_featsets{$feat_name}{feats} = \@feats;
+                $named_featsets{$feat_name}{descr} = $feat_descr;
             }
-            if ($experiments_section) {
-                print_line(\@feats, $feat_descr);
+            if ($_ eq "<<<EXPERIMENTS>>>") {
+                $experiments_section = 1;
+                $curr_feat_str = undef;
+            }
+            else {
+                ($feat_name, $feat_descr) = extract_info($prev_comment);
+                $curr_feat_str = $_;
             }
         }
-        if ($_ eq "<<<EXPERIMENTS>>>") {
-            $experiments_section = 1;
-            $curr_feat_str = undef;
-            next;
-        }
-        ($feat_name, $feat_descr) = extract_info($prev_comment);
-        $curr_feat_str = $_;
     }
-}
-my @feats = featstr_to_list($curr_feat_str);
-@feats = replace_featset_refs(\@feats, \%named_featsets);
-if ($experiments_section) {
-    print_line(\@feats, $feat_descr);
+    
 }
