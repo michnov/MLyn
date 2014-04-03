@@ -260,8 +260,10 @@ cross_eval :
 	while [ `ls $(TTE_DIR)/done_cv.$(ML_ID).* 2> /dev/null | wc -l` -lt $(CROSS_VALID_N) ]; do \
 		sleep 2; \
 	done; \
-	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).cv_out_[0-9][0-9].$(ML_ID).res | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG) >> $(STATS_FILE); \
-	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).cv_in_[0-9][0-9].$(ML_ID).res | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG) >> $(STATS_FILE); \
+	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).cv_out_[0-9][0-9].$(ML_ID).res > $(TTE_DIR)/result/train.$(DATA_SOURCE).out.$(ML_ID).res; \
+	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).out.$(ML_ID).res | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG) >> $(STATS_FILE); \
+	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).cv_in_[0-9][0-9].$(ML_ID).res > $(TTE_DIR)/result/train.$(DATA_SOURCE).in.$(ML_ID).res; \
+	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).in.$(ML_ID).res | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG) >> $(STATS_FILE); \
 	touch $(TTE_DIR)/done.$(ML_ID)
 
 publish_results_html :
