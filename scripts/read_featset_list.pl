@@ -70,10 +70,6 @@ while (<STDIN>) {
         $prev_comment = undef;
         next;
     }
-    if ($_ eq "<<<EXPERIMENTS>>>") {
-        $experiments_section = 1;
-        next;
-    }
     
     if ($is_featset_count) {
         if ($experiments_section && $_ !~ /^\s/) {
@@ -94,6 +90,11 @@ while (<STDIN>) {
                 if ($experiments_section) {
                     print_line(\@feats, $feat_descr);
                 }
+            }
+            if ($_ eq "<<<EXPERIMENTS>>>") {
+                $experiments_section = 1;
+                $curr_feat_str = undef;
+                next;
             }
             ($feat_name, $feat_descr) = extract_info($prev_comment);
             $curr_feat_str = $_;
