@@ -206,8 +206,9 @@ $(TTE_FEATS_DIR)/all.acc :
 			"make -s tte RANKING=$(RANKING) DATA_ID=$(DATA_ID) STATS_FILE=$(TTE_FEATS_DIR)/acc.$$iter.$$featsha DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_FEATS_DIR)/$$featsha FEAT_LIST=$$feat_list FEAT_DESCR=\"$$feat_descr\"; \
 			touch $(TTE_FEATS_DIR)/done.$$featsha;"; \
 		sleep 30; \
-	done
-	while [ `ls $(TTE_FEATS_DIR)/done.* 2> /dev/null | wc -l` -lt `cat $(FEATSET_LIST) | grep -v "^#" | grep -v "^$$" | grep -v "^[ 	]" | wc -l` ]; do \
+	done; \
+	featset_count=`cat $(FEATSET_LIST) | scripts/read_featset_list.pl -c`; \
+	while [ `ls $(TTE_FEATS_DIR)/done.* 2> /dev/null | wc -l` -lt $$featset_count ]; do \
 		sleep 10; \
 	done
 	cat $(TTE_FEATS_DIR)/acc.* > $@
