@@ -200,10 +200,7 @@ $(TTE_FEATS_DIR)/all.acc :
 	mkdir -p $(TTE_FEATS_DIR)
 	mkdir -p $(TTE_FEATS_DIR)/log
 	iter=000; \
-	for i in `cat $(FEATSET_LIST)`; do \
-		if [ `echo $$i | cut -c1` = "#" ]; then \
-			continue; \
-		fi; \
+	for i in `cat $(FEATSET_LIST) | scripts/read_featset_list.pl`; do \
 		iter=`perl -e 'my $$x = shift @ARGV; $$x++; printf "%03s", $$x;' $$iter`; \
 		featsha=`echo "$$i" | shasum | cut -c 1-10`; \
 		qsubmit --jobname="tte_feats.$$featsha" --mem="1g" --priority="0" --logdir="$(TTE_FEATS_DIR)/log/$$featsha" \
@@ -211,7 +208,7 @@ $(TTE_FEATS_DIR)/all.acc :
 			touch $(TTE_FEATS_DIR)/done.$$featsha;"; \
 		sleep 30; \
 	done
-	while [ `ls $(TTE_FEATS_DIR)/done.* 2> /dev/null | wc -l` -lt `cat $(FEATSET_LIST) | grep -v "^#" | wc -l` ]; do \
+	while [ `ls $(TTE_FEATS_DIR)/done.* 2> /dev/null | wc -l` -lt `cat $(FEATSET_LIST) | grep -v "^#" | grep -Pv "^\s" | wc -l` ]; do \
 		sleep 10; \
 	done
 	cat $(TTE_FEATS_DIR)/acc.* > $@
