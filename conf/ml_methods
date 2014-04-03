@@ -8,6 +8,7 @@ vw:--passes 10 --l2 0.001
 vw:--passes 30 --l2 0.00001
 vw:--passes 20 --l2 0.00001
 vw:--passes 10 --l2 0.00001
+vw.ranking:--passes 10 --l2 0.00001
 sklearn.baseline:
 sklearn.decision_trees:
 sklearn.knn:n_neighbors=1

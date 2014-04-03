@@ -18,14 +18,20 @@ SCRIPT_DIR=scripts
 DATA_ID=pcedt
 #DATA_ID=czeng
 
+RANKING=0
+
 #--------------------------------------- PREPARE DATA ----------------------------------------------------------
 
 extract_data : $(DATA_DIR)/train.$(DATA_ID).idx.table $(DATA_DIR)/dev.$(DATA_ID).idx.table
 
 $(DATA_DIR)/%.$(DATA_ID).idx.table : $(DATA_DIR)/%.$(DATA_ID).table
-	zcat $< | \
-	$(SCRIPT_DIR)/index_class.pl $(DATA_DIR)/train.$(DATA_ID).idx | \
-	gzip -c > $@
+	if [ $(RANKING) -eq 0 ]; then \
+		zcat $< | \
+			$(SCRIPT_DIR)/index_class.pl $(DATA_DIR)/train.$(DATA_ID).idx | \
+			gzip -c > $@; \
+	else \
+		cp $< $@; \
+	fi
 
 .SECONDARY : $(DATA_DIR)/train.$(DATA_ID).table $(DATA_DIR)/dev.$(DATA_ID).table $(DATA_DIR)/eval.$(DATA_ID).table
 
@@ -65,6 +71,18 @@ $(MODEL_DIR)/$(DATA_ID).vw.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$(DATA_ID
 $(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$(DATA_ID).idx.table
 	$(TRAIN_QSUBMIT) 'zcat $< | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.train.py $* "$(ML_PARAMS)" $@' $@
 
+################ RANKING ##################
+
+$(MODEL_DIR)/$(DATA_ID).vw.ranking.$(ML_PARAMS_HASH).model : $(DATA_DIR)/train.$(DATA_ID).idx.table
+	$(TRAIN_QSUBMIT) \
+		'hash=`date | shasum | cut -c 1-5`; \
+		zcat $< | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | scripts/vw_convert.pl -m | gzip -c > /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.table.$$hash; \
+		$(VW_APP) -d /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.table.$$hash -f $@ --sequence_max_length 10000 --compressed \
+			--csoaa_ldf m $(ML_PARAMS) \
+			-c -k --cache_file /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.cache.$$hash; \
+		rm /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.table.$$hash; \
+		rm /COMP.TMP/train.$(DATA_ID).idx.vw.ranking.cache.$$hash' $@
+
 clean_train:
 	-rm $(MODEL_DIR)/$(DATA_ID).$(ML_ID).model
 
@@ -86,6 +104,14 @@ $(RESULT_DIR)/%.$(DATA_ID).vw.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).vw
 		rm /COMP.TMP/$*.$(DATA_ID).idx.vw.table.$$hash; \
 		perl -pe '\''$$_ =~ s/^(.*?)\..*? (.*?)$$/$$2\t$$1/;'\'' < /COMP.TMP/$*.$(DATA_ID).vw.res.tmp.$$hash > $@; \
 		rm /COMP.TMP/$*.$(DATA_ID).vw.res.tmp.$$hash' $@
+$(RESULT_DIR)/%.$(DATA_ID).vw.ranking.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).vw.ranking.$(ML_PARAMS_HASH).model $(DATA_DIR)/%.$(DATA_ID).idx.table
+	$(TEST_QSUBMIT) \
+		'hash=`date | shasum | cut -c 1-5`; \
+		zcat $(word 2,$^) | scripts/vw_convert.pl -m | gzip -c > /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$hash; \
+		zcat /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$hash | $(VW_APP) -t -i $< -p /COMP.TMP/$*.$(DATA_ID).vw.res.tmp.$$hash --sequence_max_length 10000; \
+		rm /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$hash; \
+		cat /COMP.TMP/$*.$(DATA_ID).vw.ranking.res.tmp.$$hash > $@; \
+		rm /COMP.TMP/$*.$(DATA_ID).vw.ranking.res.tmp.$$hash' $@
 
 $(RESULT_DIR)/train.$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model $(DATA_DIR)/train.$(DATA_ID).idx.table
 	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
@@ -123,6 +149,10 @@ RESULT_TEMPLATE=$(CONF_DIR)/result.template
 TTE_DIR=$(RUNS_DIR)/tte_$(DATE)
 TTE_FEATS_DIR=$(RUNS_DIR)/tte_feats_$(DATE)
 
+ifeq ($(RANKING),1)
+RANKING_GREP=| grep "ranking"
+endif
+
 tte : $(TTE_DIR)/all.acc
 	cat $< >> $(STATS_FILE)
 $(TTE_DIR)/all.acc :
@@ -130,13 +160,14 @@ $(TTE_DIR)/all.acc :
 	mkdir -p $(TTE_DIR)/log
 	mkdir -p $(TTE_DIR)/model
 	mkdir -p $(TTE_DIR)/result
+	echo "$(DATA_DIR)/train.$(DATA_ID).table"
 	echo "FEATS:\t$(FEAT_LIST)" | sed 's/,/, /g' >> $@; \
 	echo -n "INFO:\t" >> $@; \
 	echo -n "$(DATE)\t$(DATA_ID)\t`git rev-parse --abbrev-ref HEAD`:`git rev-parse HEAD | cut -c 1-10`" >> $@; \
 	echo -n "\t`zcat $(DATA_DIR)/train.$(DATA_ID).table | cut -f1 | sort | shasum | cut -c 1-10`\t" >> $@; \
 	echo $(FEAT_LIST) | shasum | cut -c 1-10 >> $@;
 	iter=000; \
-	cat $(ML_METHOD_LIST) | while read i ; do \
+	cat $(ML_METHOD_LIST) $(RANKING_GREP) | while read i ; do \
 		if [ `echo $$i | cut -c1` = "#" ]; then \
 			continue; \
 		fi; \
@@ -149,12 +180,12 @@ $(TTE_DIR)/all.acc :
 		mkdir -p $(TTE_DIR)/log/$$ml_id; \
 		qsubmit --jobname="tte.$$ml_id" --mem="1g" --priority="0" --logdir="$(TTE_DIR)/log/$$ml_id" \
 			"echo \"$$ml_method $$ml_params\" >> $(TTE_DIR)/acc.$$iter.$$ml_id; \
-			make -s eval_train DATA_ID=$(DATA_ID) ML_METHOD=$$ml_method ML_PARAMS=\"$$ml_params\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(TTE_DIR)/model RESULT_DIR=$(TTE_DIR)/result QSUB_LOG_DIR=$(TTE_DIR)/log/$$ml_id >> $(TTE_DIR)/acc.$$iter.$$ml_id; \
-			make -s eval_dev DATA_ID=$(DATA_ID) ML_METHOD=$$ml_method ML_PARAMS=\"$$ml_params\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(TTE_DIR)/model RESULT_DIR=$(TTE_DIR)/result QSUB_LOG_DIR=$(TTE_DIR)/log/$$ml_id >> $(TTE_DIR)/acc.$$iter.$$ml_id; \
+			make -s eval_train RANKING=$(RANKING) DATA_ID=$(DATA_ID) ML_METHOD=$$ml_method ML_PARAMS=\"$$ml_params\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(TTE_DIR)/model RESULT_DIR=$(TTE_DIR)/result QSUB_LOG_DIR=$(TTE_DIR)/log/$$ml_id >> $(TTE_DIR)/acc.$$iter.$$ml_id; \
+			make -s eval_dev RANKING=$(RANKING) DATA_ID=$(DATA_ID) ML_METHOD=$$ml_method ML_PARAMS=\"$$ml_params\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(TTE_DIR)/model RESULT_DIR=$(TTE_DIR)/result QSUB_LOG_DIR=$(TTE_DIR)/log/$$ml_id >> $(TTE_DIR)/acc.$$iter.$$ml_id; \
 			touch $(TTE_DIR)/done.$$ml_id;"; \
 		sleep 2; \
 	done
-	while [ `ls $(TTE_DIR)/done.* 2> /dev/null | wc -l` -lt `cat $(ML_METHOD_LIST) | wc -l` ]; do \
+	while [ `ls $(TTE_DIR)/done.* 2> /dev/null | wc -l` -lt `cat $(ML_METHOD_LIST) $(RANKING_GREP) | wc -l` ]; do \
 		sleep 5; \
 	done
 	paste $(RESULT_TEMPLATE) $(TTE_DIR)/acc.* >> $@
@@ -175,7 +206,7 @@ $(TTE_FEATS_DIR)/all.acc :
 		iter=`perl -e 'my $$x = shift @ARGV; $$x++; printf "%03s", $$x;' $$iter`; \
 		featsha=`echo "$$i" | shasum | cut -c 1-10`; \
 		qsubmit --jobname="tte_feats.$$featsha" --mem="1g" --priority="0" --logdir="$(TTE_FEATS_DIR)/log/$$featsha" \
-			"make -s tte DATA_ID=$(DATA_ID) STATS_FILE=$(TTE_FEATS_DIR)/acc.$$iter.$$featsha DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_FEATS_DIR)/$$featsha FEAT_LIST=$$i; \
+			"make -s tte RANKING=$(RANKING) DATA_ID=$(DATA_ID) STATS_FILE=$(TTE_FEATS_DIR)/acc.$$iter.$$featsha DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_FEATS_DIR)/$$featsha FEAT_LIST=$$i; \
 			touch $(TTE_FEATS_DIR)/done.$$featsha;"; \
 		sleep 30; \
 	done
