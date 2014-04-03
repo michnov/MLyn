@@ -4,28 +4,51 @@ use strict;
 use warnings;
 
 sub print_line {
-    my ($str, $feat_descr) = @_;
+    my ($feats, $feat_descr) = @_;
+
+    if (defined $feat_descr) {
+        $feat_descr =~ s/\s/__WS__/g;
+    }
+    else {
+        $feat_descr = join ",__WS__", @$feats;
+    }
+    my $str = join ",", @$feats; 
+    print $str . "#" . $feat_descr . "\n";
+}
+
+sub featstr_to_list {
+    my ($str) = @_;
 
     $str =~ s/,\s*/,/g;
     $str =~ s/^\s+//g;
     $str =~ s/\s+$//g;
-    $str =~ s/\s+/,/g;
-   
-    if (defined $feat_descr) {
-        $feat_descr =~ s/^#\s*//g;
-        $feat_descr =~ s/\s/__WS__/g;
-    }
-    else {
-        $feat_descr = $str;
-        $feat_descr =~ s/,/,__WS__/g;
-    }
-    
-    print $str . "#" . $feat_descr . "\n";
+
+    return split /\s+/, $str; 
 }
+
+sub replace_featset_refs {
+    my ($feats, $named_featsets) = @_;
+    return map { if ($_ =~ /^@(.*)$/) { @{$named_featsets->{$1}} } else {$_} } @$feats;
+}
+
+sub extract_info {
+    my ($str) = @_;
+    
+    $str =~ s/^#\s*//g;
+    my $feat_name = undef;
+    if ($str =~ /^(.+):/) {
+        $feat_name = $1;
+        $feat_name =~ s/\s+$//;
+    }
+    return ($feat_name, $str);
+}
+
+
+my %named_featsets = ();
 
 my $curr_feat_str = undef;
 my $prev_comment = undef;
-my $feat_descr = undef;
+my ($feat_name, $feat_descr) = undef;
 
 while (<STDIN>) {
     chomp $_;
@@ -43,10 +66,17 @@ while (<STDIN>) {
     }
     else {
         if (defined $curr_feat_str) {
-            print_line($curr_feat_str, $feat_descr);
+            my @feats = featstr_to_list($curr_feat_str);
+            @feats = replace_featset_refs(\@feats, \%named_featsets);
+            if (defined $feat_name) {
+                $named_featsets{$feat_name} = \@feats;
+            }
+            print_line(\@feats, $feat_descr);
         }
-        $feat_descr = $prev_comment;
+        ($feat_name, $feat_descr) = extract_info($prev_comment);
         $curr_feat_str = $_;
     }
 }
-print_line($curr_feat_str, $feat_descr);
+my @feats = featstr_to_list($curr_feat_str);
+@feats = replace_featset_refs(\@feats, \%named_featsets);
+print_line(\@feats, $feat_descr);
