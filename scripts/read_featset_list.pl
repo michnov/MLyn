@@ -50,6 +50,8 @@ my $curr_feat_str = undef;
 my $prev_comment = undef;
 my ($feat_name, $feat_descr) = undef;
 
+my $experiments_section = 0;
+
 while (<STDIN>) {
     chomp $_;
     if ($_ =~ /^#/) {
@@ -58,6 +60,10 @@ while (<STDIN>) {
     }
     if ($_ =~ /^\s*$/) {
         $prev_comment = undef;
+        next;
+    }
+    if ($_ eq "<<<EXPERIMENTS>>>") {
+        $experiments_section = 1;
         next;
     }
 
@@ -71,7 +77,9 @@ while (<STDIN>) {
             if (defined $feat_name) {
                 $named_featsets{$feat_name} = \@feats;
             }
-            print_line(\@feats, $feat_descr);
+            if ($experiments_section) {
+                print_line(\@feats, $feat_descr);
+            }
         }
         ($feat_name, $feat_descr) = extract_info($prev_comment);
         $curr_feat_str = $_;
@@ -79,4 +87,6 @@ while (<STDIN>) {
 }
 my @feats = featstr_to_list($curr_feat_str);
 @feats = replace_featset_refs(\@feats, \%named_featsets);
-print_line(\@feats, $feat_descr);
+if ($experiments_section) {
+    print_line(\@feats, $feat_descr);
+}
