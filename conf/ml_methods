@@ -13,8 +13,8 @@ vw.ranking:m --passes 20
 vw.ranking:m --passes 30
 vw.ranking:m --passes 40
 vw.ranking:mc --loss_function logistic --passes 40
-vw.ranking:m --passes 40 -q ::
-vw.ranking:mc --loss_function logistic --passes 40 -q dd
+#vw.ranking:m --passes 40 -q dd
+#vw.ranking:mc --loss_function logistic --passes 40 -q dd
 # vw.ranking:m --passes 10 --l2 0.001
 # vw.ranking:m --passes 20 --l2 0.001
 # vw.ranking:m --passes 30 --l2 0.001
@@ -32,15 +32,15 @@ vw.ranking:m --passes 20 --l2 0.00005
 vw.ranking:m --passes 30 --l2 0.00005
 vw.ranking:m --passes 40 --l2 0.00005
 vw.ranking:mc --loss_function logistic --passes 40 --l2 0.00005
-vw.ranking:m --passes 40 --l2 0.00005 -q dd
-vw.ranking:mc --loss_function logistic --passes 40 --l2 0.00005 -q dd
+#vw.ranking:m --passes 40 --l2 0.00005 -q dd
+#vw.ranking:mc --loss_function logistic --passes 40 --l2 0.00005 -q dd
 vw.ranking:m --passes 10 --l2 0.00001
 vw.ranking:m --passes 20 --l2 0.00001
 vw.ranking:m --passes 30 --l2 0.00001
 vw.ranking:m --passes 40 --l2 0.00001
 vw.ranking:mc --loss_function logistic --passes 40 --l2 0.00001
-vw.ranking:m --passes 40 --l2 0.00001 -q dd
-vw.ranking:mc --loss_function logistic --passes 40 --l2 0.00001 -q dd
+#vw.ranking:m --passes 40 --l2 0.00001 -q dd
+#vw.ranking:mc --loss_function logistic --passes 40 --l2 0.00001 -q dd
 # vw.ranking:m --passes 10 --l1 0.00001
 # vw.ranking:m --passes 20 --l1 0.00001
 # vw.ranking:m --passes 30 --l1 0.00001
