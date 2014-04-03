@@ -11,30 +11,31 @@ vw:--passes 10 --l2 0.00001
 vw.ranking:--passes 10
 vw.ranking:--passes 20
 vw.ranking:--passes 30
-vw.ranking:--passes 10 --l2 0.1
-vw.ranking:--passes 20 --l2 0.1
-vw.ranking:--passes 30 --l2 0.1
-vw.ranking:--passes 10 --l2 0.01
-vw.ranking:--passes 20 --l2 0.01
-vw.ranking:--passes 30 --l2 0.01
+vw.ranking:--passes 40
 vw.ranking:--passes 10 --l2 0.001
 vw.ranking:--passes 20 --l2 0.001
 vw.ranking:--passes 30 --l2 0.001
+vw.ranking:--passes 40 --l2 0.001
+vw.ranking:--passes 10 --l2 0.0005
+vw.ranking:--passes 20 --l2 0.0005
+vw.ranking:--passes 30 --l2 0.0005
+vw.ranking:--passes 40 --l2 0.0005
+vw.ranking:--passes 10 --l2 0.0001
+vw.ranking:--passes 20 --l2 0.0001
+vw.ranking:--passes 30 --l2 0.0001
+vw.ranking:--passes 40 --l2 0.0001
+vw.ranking:--passes 10 --l2 0.00005
+vw.ranking:--passes 20 --l2 0.00005
+vw.ranking:--passes 30 --l2 0.00005
+vw.ranking:--passes 40 --l2 0.00005
 vw.ranking:--passes 10 --l2 0.00001
 vw.ranking:--passes 20 --l2 0.00001
 vw.ranking:--passes 30 --l2 0.00001
-vw.ranking:--passes 10 --l1 0.1
-vw.ranking:--passes 20 --l1 0.1
-vw.ranking:--passes 30 --l1 0.1
-vw.ranking:--passes 10 --l1 0.01
-vw.ranking:--passes 20 --l1 0.01
-vw.ranking:--passes 30 --l1 0.01
-vw.ranking:--passes 10 --l1 0.001
-vw.ranking:--passes 20 --l1 0.001
-vw.ranking:--passes 30 --l1 0.001
+vw.ranking:--passes 40 --l2 0.00001
 vw.ranking:--passes 10 --l1 0.00001
 vw.ranking:--passes 20 --l1 0.00001
 vw.ranking:--passes 30 --l1 0.00001
+vw.ranking:--passes 40 --l1 0.00001
 sklearn.baseline:
 sklearn.decision_trees:
 sklearn.knn:n_neighbors=1
