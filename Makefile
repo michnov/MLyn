@@ -92,11 +92,11 @@ test_dev : $(RESULT_DIR)/dev.$(DATA_ID).$(ML_ID).res
 test_train : $(RESULT_DIR)/train.$(DATA_ID).$(ML_ID).res
 
 $(RESULT_DIR)/%.$(DATA_ID).maxent.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).maxent.$(ML_PARAMS_HASH).model $(DATA_DIR)/%.$(DATA_ID).idx.table
-	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/maxent.test.pl $< > $@' $@
+	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/maxent.test.pl $< > $@' $@
 $(RESULT_DIR)/%.$(DATA_ID).vw.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).vw.$(ML_PARAMS_HASH).model $(DATA_DIR)/%.$(DATA_ID).idx.table
 	$(TEST_QSUBMIT) \
 		'hash=`date | shasum | cut -c 1-5`; \
-		zcat $(word 2,$^) | scripts/vw_convert.pl --test | gzip -c > /COMP.TMP/$*.$(DATA_ID).idx.vw.table.$$hash; \
+		zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | scripts/vw_convert.pl --test | gzip -c > /COMP.TMP/$*.$(DATA_ID).idx.vw.table.$$hash; \
 		zcat /COMP.TMP/$*.$(DATA_ID).idx.vw.table.$$hash | $(VW_APP) -t -i $< -p /COMP.TMP/$*.$(DATA_ID).vw.res.tmp.$$hash --sequence_max_length 10000; \
 		rm /COMP.TMP/$*.$(DATA_ID).idx.vw.table.$$hash; \
 		perl -pe '\''$$_ =~ s/^(.*?)\..*? (.*?)$$/$$2\t$$1/;'\'' < /COMP.TMP/$*.$(DATA_ID).vw.res.tmp.$$hash > $@; \
@@ -104,15 +104,15 @@ $(RESULT_DIR)/%.$(DATA_ID).vw.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).vw
 $(RESULT_DIR)/%.$(DATA_ID).vw.ranking.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).vw.ranking.$(ML_PARAMS_HASH).model $(DATA_DIR)/%.$(DATA_ID).idx.table
 	$(TEST_QSUBMIT) \
 		'hash=`date | shasum | cut -c 1-5`; \
-		zcat $(word 2,$^) | scripts/vw_convert.pl -m | gzip -c > /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$hash; \
+		zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | scripts/vw_convert.pl -m | gzip -c > /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$hash; \
 		zcat /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$hash | $(VW_APP) -t -i $< -p $@ --sequence_max_length 10000; \
 		rm /COMP.TMP/$*.$(DATA_ID).idx.vw.ranking.table.$$hash' $@
 $(RESULT_DIR)/train.$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model $(DATA_DIR)/train.$(DATA_ID).idx.table
-	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
+	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
 $(RESULT_DIR)/dev.$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model $(DATA_DIR)/dev.$(DATA_ID).idx.table
-	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
+	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
 $(RESULT_DIR)/eval.$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).res : $(MODEL_DIR)/$(DATA_ID).sklearn.%.$(ML_PARAMS_HASH).model $(DATA_DIR)/eval.$(DATA_ID).idx.table
-	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
+	$(TEST_QSUBMIT) 'zcat $(word 2,$^) | $(SCRIPT_DIR)/filter_feat.pl --in $(FEAT_LIST) | $(SCRIPT_DIR)/sklearn.test.py $< > $@' $@
 
 clean_test:
 	-rm $(RESULT_DIR)/*.$(DATA_ID).$(ML_ID).res
