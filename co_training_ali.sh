@@ -31,7 +31,6 @@ function co_training_ali() {
         iter=`printf "%03d" $i`
 
         mkdir -p $run_dir/iter_$iter
-        echo $iter > $run_dir/iter_$iter/stats
 
         l1_iter_run_dir=$run_dir/iter_$iter/l1
         l2_iter_run_dir=$run_dir/iter_$iter/l2
@@ -73,6 +72,11 @@ function co_training_ali() {
         l1_align_labeled_data=$l1_iter_run_dir/data/aligned.$l1_base
         l2_align_labeled_data=$l2_iter_run_dir/data/aligned.$l2_base
 
+        # merging stats
+        echo $iter > $run_dir/iter_$iter/stats
+        cat $run_dir/iter_$iter/l1/stats >> $run_dir/iter_$iter/stats
+        cat $run_dir/iter_$iter/l2/stats >> $run_dir/iter_$iter/stats
+
         # set params for the next iteration
         if [ -z $split ]; then
             l1_train_data="$l1_labeled_data $l1_align_labeled_data"
@@ -100,12 +104,17 @@ function co_training_ali() {
 
     # the final iteration - just training and testing
     iter=`printf "%03d" $iter_count`
-    mkdir -p $run_dir/iter_$iter
-    echo $iter > $run_dir/iter_$iter/stats
+    mkdir -p $run_dir/iter_$iter/l1
+    mkdir -p $run_dir/iter_$iter/l2
     make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l1 TRAIN_DATA="$l1_train_data" TEST_DATA=${params[L1_TRAIN_DATA]} INITIAL_MODEL=$l1_init_model ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/l1/stats
     make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l1 TRAIN_DATA="$l1_train_data" TEST_DATA=${params[L1_TEST_DATA]} INITIAL_MODEL=$l1_init_model ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/l1/stats
     make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l2 TRAIN_DATA="$l2_train_data" TEST_DATA=${params[L2_TRAIN_DATA]} INITIAL_MODEL=$l2_init_model ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/l2/stats
     make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l2 TRAIN_DATA="$l2_train_data" TEST_DATA=${params[L2_TEST_DATA]} INITIAL_MODEL=$l2_init_model ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/l2/stats
+    
+    # merging stats
+    echo $iter > $run_dir/iter_$iter/stats
+    cat $run_dir/iter_$iter/l1/stats >> $run_dir/iter_$iter/stats
+    cat $run_dir/iter_$iter/l2/stats >> $run_dir/iter_$iter/stats
 
     ############################ Collecting statistics #########################
     
@@ -117,8 +126,10 @@ function co_training_ali() {
     fi
     # a header used for iter results
     echo "ITER" > $run_dir/stats.header
-    print_ranking_header "TRAIN" >> $run_dir/stats.header
-    print_ranking_header "TEST" >> $run_dir/stats.header
+    print_ranking_header "TRAIN_L1" >> $run_dir/stats.header
+    print_ranking_header "TEST_L1" >> $run_dir/stats.header
+    print_ranking_header "TRAIN_L2" >> $run_dir/stats.header
+    print_ranking_header "TEST_L2" >> $run_dir/stats.header
     
     echo -e "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
     paste $run_dir/stats.header $run_dir/iter_*/stats >> $run_dir/stats
