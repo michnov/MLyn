@@ -30,11 +30,13 @@ DATA_SOURCE=pcedt
 
 TRAIN_DATA_NAME=train
 TEST_DATA_NAME=dev
+UNLABELED_DATA_NAME=unlabeled
 
 RANKING=0
 
 TRAIN_DATA_ID := $(TRAIN_DATA_NAME).$(DATA_SOURCE)
 TEST_DATA_ID := $(TEST_DATA_NAME).$(DATA_SOURCE)
+UNLABELED_DATA_ID := $(UNLABELED_DATA_NAME).$(DATA_SOURCE)
 
 ifdef CROSS_VALID_I
 TEST_DATA_NAME := $(TRAIN_DATA_NAME)
@@ -46,6 +48,7 @@ endif
 
 TRAIN_SET = $(DATA_DIR)/$(TRAIN_DATA_NAME).$(DATA_SOURCE).idx.table
 TEST_SET = $(DATA_DIR)/$(TEST_DATA_NAME).$(DATA_SOURCE).idx.table
+UNLABELED_SET = $(DATA_DIR)/$(UNLABELED_DATA_NAME).$(DATA_SOURCE).idx.table
 
 #------------------------------------------- ML ---------------------------------------------------
 
@@ -173,6 +176,10 @@ endif
 
 CROSS_VALID_N=0
 
+#SEMI_SUP=self_training
+#SEMI_SUP=co_training
+SEMI_SUP_ITER=1
+
 #--------------------------------- train, test, eval for all metnods -------------------------------------
 
 TTE_DIR=$(RUNS_DIR)/tte_$(DATE)
@@ -210,7 +217,9 @@ $(TTE_DIR)/all.acc :
 		ml_params_hash=`echo "$$ml_params" | shasum | cut -c 1-5`; \
 		ml_id=$$ml_method.$$ml_params_hash; \
 		mkdir -p $(TTE_DIR)/log/$$ml_id; \
-		if [ $(CROSS_VALID_N) -gt 0 ]; then \
+		if [ $(SEMI_SUP) = 'self_training' ]; then \
+# TODO self-training
+		elif [ $(CROSS_VALID_N) -gt 0 ]; then \
 			qsubmit --jobname="tte.cv.$$ml_id" --mem="1g" --priority="-20" --logdir="$(TTE_DIR)/log/$$ml_id" \
 				"make -s cross_eval CROSS_VALID_N=$(CROSS_VALID_N) DATA_SOURCE=$(DATA_SOURCE) RANKING=$(RANKING) ML_METHOD=$$ml_method ML_PARAMS=\"$$ml_params\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_DIR) STATS_FILE=$(TTE_DIR)/acc.$$iter.$$ml_id;"; \
 		else \
@@ -274,6 +283,38 @@ cross_eval :
 	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).cv_in_[0-9][0-9].$(ML_ID).res > $(TTE_DIR)/result/train.$(DATA_SOURCE).in.$(ML_ID).res; \
 	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).in.$(ML_ID).res | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG) >> $(STATS_FILE); \
 	touch $(TTE_DIR)/done.$(ML_ID)
+
+#--------------------------------- Self-training on unlabeled data -------------------------------------
+
+ST_DIR=$(TTE_DIR)/self_training
+
+MAX_LOSS=5.0
+
+self_training :
+	i=0; \
+	iter=`printf "%03d" $$i`; \
+	mkdir -p $(ST_DIR)/model/$$iter; \
+	mkdir -p $(ST_DIR)/result/$$iter; \
+	mkdir -p $(ST_DIR)/log/$$iter; \
+	make -s eval DATA_SOURCE=$(DATA_SOURCE) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(TRAIN_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(ST_DIR)/model/$$iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID) >> $(ST_DIR)/acc.$$iter.$(ML_ID); \
+	make -s eval DATA_SOURCE=$(DATA_SOURCE) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(TEST_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(ST_DIR)/model/$$iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID) >> $(ST_DIR)/acc.$$iter.$(ML_ID); \
+	for (( i=1; i<=$(SEMI_SUP_ITER); i++ )); do \
+		old_iter=$$iter; \
+		iter=`printf "%03d" $$i`; \
+		mkdir -p $(ST_DIR)/data/$$iter; \
+		mkdir -p $(ST_DIR)/model/$$iter; \
+		mkdir -p $(ST_DIR)/result/$$iter; \
+		mkdir -p $(ST_DIR)/log/$$iter; \
+		resolved_data=$(ST_DIR)/data/$$iter/resolved_unlabeled.table; \
+		make -s test DATA_SOURCE=$(DATA_SOURCE) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(UNLABELED_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(ST_DIR)/model/$$old_iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID); \
+		scripts/paste_data_results.sh $(UNLABELED_SET) $(ST_DIR)/result/$$iter/$(UNLABELED_DATA_ID).$(ML_METHOD).$(ML_PARAMS_HASH).res | scripts/filter_by_loss.pl $(MAX_LOSS) | scripts/discretize_losses.pl | gzip -c > $$resolved_data; \
+		new_train_data=$(ST_DIR)/data/$$iter/new_train.$(DATA_SOURCE).idx.table; \
+		zcat $(TRAIN_SET) $$resolved_data | gzip -c > $$new_train_data; \
+		ln -s $(TRAIN_SET) $(ST_DIR)/data/$$iter/$(TRAIN_DATA_NAME).$(DATA_SOURCE).idx.table; \
+		ln -s $(TEST_SET) $(ST_DIR)/data/$$iter/$(TEST_DATA_NAME).$(DATA_SOURCE).idx.table; \
+		make -s eval DATA_SOURCE=$(DATA_SOURCE) TRAIN_DATA_NAME=new_train TEST_DATA_NAME=$(TRAIN_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(ST_DIR)/data/$$iter MODEL_DIR=$(ST_DIR)/model/$$iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID) >> $(ST_DIR)/acc.$$iter.$(ML_ID); \
+		make -s eval DATA_SOURCE=$(DATA_SOURCE) TRAIN_DATA_NAME=new_train TEST_DATA_NAME=$(TEST_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(ST_DIR)/data/$$iter MODEL_DIR=$(ST_DIR)/model/$$iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID) >> $(ST_DIR)/acc.$$iter.$(ML_ID); \
+	done
 
 publish_results_html :
 	scp $(STATS_FILE).html mnovak@ufal:/home/mnovak/public_html/data/it_transl_res.html
