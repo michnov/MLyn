@@ -1,5 +1,7 @@
 SHELL:=/bin/bash
 
+include makefile.common
+
 #--------------------------------------- HELP --------------------------------------------------------
 
 define HELP_TEXT
@@ -31,11 +33,6 @@ export HELP_TEXT
 help :
 	@echo "$$HELP_TEXT"
 
-#---------------------------------
-
-LOGGER=./log.sh
-LOG_INFO=$(LOGGER) INFO
-
 #----------- data ----------------
 #TRAIN_DATA
 #TEST_DATA
@@ -58,19 +55,13 @@ VW_APP=/net/cluster/TMP/mnovak/tools/vowpal_wabbit/vowpalwabbit/vw
 
 SCRIPT_DIR=scripts
 
-RUN_DIR=tte.run_dir
-
-DATA_DIR=$(RUN_DIR)/data
 MODEL_DIR=$(RUN_DIR)/model
 RESULT_DIR=$(RUN_DIR)/result
 
 #========== reading variables from a config file ================
 # this must be placed after all definitions of public variables
 
-ifdef CONFIG_FILE
-CONFIG_CMD:=$(shell cat $(CONFIG_FILE) | grep -v '^\#' | sed 's/ /__SPACE__/g')
-$(foreach ONE_CMD,$(CONFIG_CMD),$(eval $(subst __SPACE__, ,$(ONE_CMD))))
-endif
+include makefile.config
 
 #----------- skuska --------------
 
@@ -86,20 +77,15 @@ skuska :
 
 #----------- files ---------------
 
-file_stem = $(if $(filter .table, $(suffix $1)),$(basename $(notdir $1)),$(notdir $1))
-
-TRAIN_DATA_STEM := $(call file_stem, $(TRAIN_DATA))
-TEST_DATA_STEM := $(call file_stem, $(TEST_DATA))
+TRAIN_DATA_STEM := $(call ml_method_stem, $(TRAIN_DATA))
+TEST_DATA_STEM := $(call ml_method_stem, $(TEST_DATA))
 
 MODEL_FILE = $(MODEL_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).model
 RESULT_FILE = $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).res
 
 #------------ create directories -----------
 
-$(DATA_DIR) $(MODEL_DIR) $(RESULT_DIR) : | $(RUN_DIR)
-	mkdir $@
-
-$(RUN_DIR) :
+$(MODEL_DIR) $(RESULT_DIR) : | $(RUN_DIR)
 	mkdir $@
 
 #--------------------------------------- PREPROCESS -----------------------------------------------------------
@@ -107,44 +93,21 @@ $(RUN_DIR) :
 TRAIN_DATA_READY = $(DATA_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).table
 TEST_DATA_READY = $(DATA_DIR)/$(TEST_DATA_STEM).$(ML_METHOD).table
 
+echo_ready :
+	echo $(TRAIN_DATA_READY)
+	echo $(TEST_DATA_READY)
+
 preprocess : $(TRAIN_DATA_READY) $(TEST_DATA_READY)
 
 $(TRAIN_DATA_READY) : _DATA=$(TRAIN_DATA)
+
 $(TEST_DATA_READY) : _DATA=$(TEST_DATA)
 
-#------------- symlink data files ----------
+$(DATA_DIR)/%.$(ML_METHOD).table :
+	$(MAKE) -f makefile.preprocess echo $@ DATA=$(_DATA)
 
-.SECONDARY : $(DATA_DIR)/$(TRAIN_DATA_STEM).orig.table $(DATA_DIR)/$(TRAIN_DATA_STEM).filter_feats.table $(DATA_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).table
-.SECONDARY : $(DATA_DIR)/$(TEST_DATA_STEM).orig.table $(DATA_DIR)/$(TEST_DATA_STEM).filter_feats.table $(DATA_DIR)/$(TEST_DATA_STEM).$(ML_METHOD).table
-
-
-$(DATA_DIR)/%.orig.table : | $(DATA_DIR)
-	$(LOG_INFO) "Symlinking a data file: $@ -> $(abspath $(_DATA))" >&2
-	ln -s $(abspath $(_DATA)) $@
-
-#------------- feature filtering -----------------
-
-$(DATA_DIR)/%.filter_feats.table : $(DATA_DIR)/%.orig.table
-	$(LOG_INFO) "Feature filtering: $< => $@" >&2
-	if [ _$(FEAT_LIST) != _ ]; then \
-		filt_feat_flag="--in $(FEAT_LIST)"; \
-	fi; \
-	zcat $< | $(SCRIPT_DIR)/filter_feat.pl $$filt_feat_flag | gzip -c > $@
-
-#------------- ML formatting -----------------
-
-#TODO: vw files must be indexed first => separate targets for train and test files
-
-$(DATA_DIR)/%.$(ML_METHOD).table : $(DATA_DIR)/%.filter_feats.table
-	$(LOG_INFO) "Converting to the format expected by a ML method: $< => $@" >&2
-	case $(ML_METHOD) in \
-		vw) zcat $< | scripts/vw_convert.pl | gzip -c > $@ \
-			;; \
-		vw.ranking) zcat $< | scripts/vw_convert.pl -m | gzip -c > $@ \
-			;; \
-		*) ln -s $< $@ \
-			;; \
-	esac
+#test_data_path :
+#	echo $(TEST_DATA_READY)
 
 #----------------------------------------- TRAIN --------------------------------------------------------------
 
@@ -199,6 +162,9 @@ $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).r
 
 clean_test:
 	-rm $(RESULT_FILE)
+
+result_path :
+	echo $(RESULT_FILE)
 
 #----------------------------------------- EVAL --------------------------------------------------------------
 
