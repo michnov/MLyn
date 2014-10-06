@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # loading parameters into a global hash
-# parameters can be specified both in a file: argument -c <file>
+# parameters can be specified both in a file: argument -f <file>
 # or directly as a commmand arg
 # the format of parameters is: name=value
 # INPUT:
@@ -14,9 +14,9 @@ function load_params()
     echo "$@"
 
     local OPTIND
-    while getopts ":c:" opt; do
+    while getopts ":f:" opt; do
         case $opt in
-            c) config_file=$OPTARG
+            f) config_file=$OPTARG
                 ;;
             \?) echo "Invalid option: -$OPTARG" >&2
                 ;;
@@ -29,6 +29,17 @@ function load_params()
     
     config_script+=`echo "$@" | sed 's/ /\n/g' | sed $sed_cmd`
     eval $config_script
+}
+
+function save_params()
+{
+    config_var=$1
+    output_file=$2
+    all_keys=`eval 'echo ${!'$config_var'[@]}'`
+    for key in $all_keys; do
+        value=`eval 'echo ${'$config_var'['$key']}'`
+        echo $key=$value >> $output_file
+    done
 }
 
 function run_in_parallel()
@@ -47,9 +58,9 @@ function run_in_parallel()
     fi
 }
 
-declare -A params
-load_params params "$@"
-echo "POzdrav: ${params[file]}"
-echo "Blbost: ${params[skuska]}"
-echo "ROBO: ${params[ROBO]}"
-echo "FUCK: ${params[FUCK]}"
+#declare -A params
+#load_params params "$@"
+#echo "POzdrav: ${params[file]}"
+#echo "Blbost: ${params[skuska]}"
+#echo "ROBO: ${params[ROBO]}"
+#echo "FUCK: ${params[FUCK]}"

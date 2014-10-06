@@ -2,54 +2,55 @@
 
 source common.sh
 
-function iterate_mlmethods()
-{
-    featset=${params[featset]}
-    mlmethod_list=${params[mlmethod_list]}
-    run_dir=${params[run_dir]}
+declare -A params
+load_params params "$@"
+config_file=${params[RUN_DIR]}/config
+save_params params $config_file
 
-	iter=000
-    cat $mlmethod_list | grep -v "^#" > $run_dir/mlmethod_per_line.list
+###################################
 
-    # run an experiment for every feature set
-	cat $run_dir/mlmethod_per_line.list | while read mlmethod; do
-		iter=`perl -e 'my $x = shift @ARGV; $x++; printf "%03s", $x;' $iter`
-		feats=`echo "$i" | cut -d"#" -f1`
-		feats_descr=`echo "$i" | sed 's/^[^#]*#//' | sed 's/__WS__/ /g'`
-		featsha=`echo "$feats" | shasum | cut -c 1-10`
+featset=${params[FEATSET]}
+mlmethod_list=${params[MLMETHOD_LIST]}
+run_dir=${params[RUN_DIR]}
 
-        run_subdir=$run_dir/$iter.$featsha.featset
-        mkdir -p $run_subdir
+result_template=conf/result.template
 
-        feats_info_file=$run_subdir/info
-	    echo -en "FEATS:" >> $feats_info_file
-	    echo -en "\t$feats_descr" >> $feats_info_file
-	    echo -en "\t$featsha" >> $feats_info_file
-	    echo -e "\t`echo $feats | sed 's/,/, /g'`" >> $feats_info_file
+iter=000
+cat $mlmethod_list | grep -v "^#" > $run_dir/mlmethod_per_line.list
+if [ ${params[RANKING]}. == 1. ]; then
+    cat $run_dir/mlmethod_per_line.list | grep "ranking" > $run_dir/mlmethod_per_line.list.tmp
+    cp $run_dir/mlmethod_per_line.list.tmp $run_dir/mlmethod_per_line.list
+    result_template=conf/result.ranking.template
+fi
 
-        run_in_parallel \
-            "echo ahoj" \
-            "featset_exper.$featsha" -50 $run_subdir/log 30
-            
-            # TODO
-			#"make -s tte SEMI_SUP=$(SEMI_SUP) DATA_SOURCE_1=$(DATA_SOURCE_1) DATA_SOURCE_2=$(DATA_SOURCE_2) DATA_DIR_1=$(DATA_DIR_1) DATA_DIR_2=$(DATA_DIR_2) RANKING=$(RANKING) CROSS_VALID_N=$(CROSS_VALID_N) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(TEST_DATA_NAME) DATA_SOURCE=$(DATA_SOURCE) STATS_FILE=$(TTE_FEATS_DIR)/acc.$$iter.$$featsha DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_FEATS_DIR)/$$featsha FEAT_LIST=$$feat_list FEAT_DESCR=\"$$feat_descr\"; \
-			#touch $(TTE_FEATS_DIR)/done.$$featsha;";
-	done
+# run an experiment for every feature set
+cat $run_dir/mlmethod_per_line.list | while read ml_method_info; do
+    iter=`perl -e 'my $x = shift @ARGV; $x++; printf "%03s", $x;' $iter`
     
-    # wait until all experiments are acomplished
-	featset_count=`cat $run_dir/featset_per_line.list | wc -l`
-	while [ `ls $run_dir/*.featset/done 2> /dev/null | wc -l` -lt $featset_count ]; do
-		sleep 10
-	done
+    ml_method=`echo $ml_method_info | cut -f1 -d':'`
+    ml_params="`echo $ml_method_info | cut -f2- -d':'`"
+    ml_method_sha=`echo "$ml_method_info" | shasum | cut -c 1-5`
 
-    # collect results
-    stats=$run_dir/stats
-    for run_subdir in $run_dir/*.featset; do
-        cat $run_subdir/info >> $stats
+    run_subdir=$run_dir/$iter.$ml_method_sha.mlmethod
+    mkdir -p $run_subdir
+
+    # print a header into a subprocess stats file
+    echo $ml_method $ml_params >> $run_subdir/stats
+
+    run_in_parallel \
+        "echo ahoj" \
+        "mlmethod_exper.$ml_method_sha" -20 $run_subdir/log 2
+        
         # TODO
-	    cat $(TTE_FEATS_DIR)/acc.* > $@
-    done
+        #"make -s tte SEMI_SUP=$(SEMI_SUP) DATA_SOURCE_1=$(DATA_SOURCE_1) DATA_SOURCE_2=$(DATA_SOURCE_2) DATA_DIR_1=$(DATA_DIR_1) DATA_DIR_2=$(DATA_DIR_2) RANKING=$(RANKING) CROSS_VALID_N=$(CROSS_VALID_N) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(TEST_DATA_NAME) DATA_SOURCE=$(DATA_SOURCE) STATS_FILE=$(TTE_FEATS_DIR)/acc.$$iter.$$featsha DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_FEATS_DIR)/$$featsha FEAT_LIST=$$feat_list FEAT_DESCR=\"$$feat_descr\"; \
+        #touch $(TTE_FEATS_DIR)/done.$$featsha;";
+done
 
-}
+# wait until all experiments are acomplished
+mlmethods_count=`cat $run_dir/mlmethod_per_line.list | wc -l`
+while [ `ls $run_dir/*.mlmethod/done 2> /dev/null | wc -l` -lt $mlmethods_count ]; do
+    sleep 5
+done
 
-
+# collect results
+paste $result_template $run_dir/*.mlmethod/stats >> $run_dir/stats
