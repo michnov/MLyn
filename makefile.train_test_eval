@@ -31,6 +31,11 @@ export HELP_TEXT
 help :
 	@echo "$$HELP_TEXT"
 
+#---------------------------------
+
+LOGGER=./log.sh
+LOG_INFO=$(LOGGER) INFO
+
 #----------- data ----------------
 #TRAIN_DATA
 #TEST_DATA
@@ -70,6 +75,7 @@ endif
 #----------- skuska --------------
 
 skuska :
+	@echo -e "[$$(date '+%F %T')]\tasd"
 	@echo $(ML_METHOD)
 	@echo $(ML_PARAMS)
 	@echo $(RUN_DIR)
@@ -110,13 +116,13 @@ preprocess : $(TRAIN_DATA_READY) $(TEST_DATA_READY)
 
 
 $(DATA_DIR)/%.orig.table : | $(DATA_DIR)
-	echo "Symlinking a data file: $@ -> $(abspath $(_DATA))" >&2
+	$(LOG_INFO) "Symlinking a data file: $@ -> $(abspath $(_DATA))" >&2
 	ln -s $(abspath $(_DATA)) $@
 
 #------------- feature filtering -----------------
 
 $(DATA_DIR)/%.filter_feats.table : $(DATA_DIR)/%.orig.table
-	echo "Feature filtering: $< => $@" >&2
+	$(LOG_INFO) "Feature filtering: $< => $@" >&2
 	if [ _$(FEAT_LIST) != _ ]; then \
 		filt_feat_flag="--in $(FEAT_LIST)"; \
 	fi; \
@@ -127,7 +133,7 @@ $(DATA_DIR)/%.filter_feats.table : $(DATA_DIR)/%.orig.table
 #TODO: vw files must be indexed first => separate targets for train and test files
 
 $(DATA_DIR)/%.$(ML_METHOD).table : $(DATA_DIR)/%.filter_feats.table
-	echo "Converting to the format expected by a ML method: $< => $@" >&2
+	$(LOG_INFO) "Converting to the format expected by a ML method: $< => $@" >&2
 	case $(ML_METHOD) in \
 		vw) zcat $< | scripts/vw_convert.pl | gzip -c > $@ \
 			;; \
@@ -144,24 +150,24 @@ train : $(MODEL_FILE)
 $(MODEL_FILE) : _DATA=$(TRAIN_DATA)
 
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).model     : $(TRAIN_DATA_READY) | $(MODEL_DIR)
-	echo "Training a maxent model: $< => $@" >&2
+	$(LOG_INFO) "Training a maxent model: $< => $@" >&2
 	zcat $< | $(SCRIPT_DIR)/maxent.train.pl $@
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).model         : $(TRAIN_DATA_READY) | $(MODEL_DIR)
-	echo "Training a VW-oaa model: $< => $@" >&2
+	$(LOG_INFO) "Training a VW-oaa model: $< => $@" >&2
 	$(VW_APP) -d $< -f $@ -b 20 --compressed \
 		--oaa `zcat $< | cut -f 1 | sort -n | tail -n1` $(ML_PARAMS) \
 		--holdout_off \
 		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).$$$$.cache
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).model : $(TRAIN_DATA_READY) | $(MODEL_DIR)
-	echo "Training a VW-csoaa_ldf (ranking) model: $< => $@" >&2
+	$(LOG_INFO) "Training a VW-csoaa_ldf (ranking) model: $< => $@" >&2
 	$(VW_APP) -d $< -f $@ -b 20 --compressed \
 		--csoaa_ldf $(ML_PARAMS) \
 		--holdout_off \
 		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).$$$$.cache
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).model : $(TRAIN_DATA_READY) | $(MODEL_DIR)
-	echo "Training a ScikitLearn ($*) model: $< => $@" >&2
+	$(LOG_INFO) "Training a ScikitLearn ($*) model: $< => $@" >&2
 	zcat $< | $(SCRIPT_DIR)/sklearn.train.py $* "$(ML_PARAMS)" $@
 
 clean_train:
@@ -174,18 +180,18 @@ test : $(RESULT_FILE)
 $(RESULT_FILE) : _DATA=$(TEST_DATA)
 
 $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).res     : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
-	echo "Predicting labels with a maxent model: $(word 2,$^) => $@" >&2
+	$(LOG_INFO) "Predicting labels with a maxent model: $(word 2,$^) => $@" >&2
 	zcat $(word 2,$^) | $(SCRIPT_DIR)/maxent.test.pl $< > $@
 $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).res         : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
-	echo "Predicting labels with a VW-oaa model: $(word 2,$^) => $@" >&2
+	$(LOG_INFO) "Predicting labels with a VW-oaa model: $(word 2,$^) => $@" >&2
 	zcat $(word 2,$^) | $(VW_APP) -t -i $< -p $@.$$$$ -b 20; \
 	perl -pe '\''$$_ =~ s/^(.*?)\..*? (.*?)$$/$$2\t$$1/;'\'' < $@.$$$$ > $@; \
 	rm $@.$$$$
 $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).res : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
-	echo "Predicting labels with a VW-csoaa_ldf (ranking) model: $(word 2,$^) => $@" >&2
+	$(LOG_INFO) "Predicting labels with a VW-csoaa_ldf (ranking) model: $(word 2,$^) => $@" >&2
 	zcat $(word 2,$^) | $(VW_APP) -t -i $< -p $@ -b 20
 $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).res  : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
-	echo "Predicting labels with a ScikitLearn ($*): $(word 2,$^) => $@" >&2
+	$(LOG_INFO) "Predicting labels with a ScikitLearn ($*): $(word 2,$^) => $@" >&2
 	zcat $(word 2,$^) | $(SCRIPT_DIR)/sklearn.test.py $< > $@
 
 clean_test:
@@ -199,7 +205,7 @@ RANK_EVAL_FLAG=--acc --prf
 endif
 
 eval : $(RESULT_FILE)
-	echo "Evaluating the predicted labelling: $<" >&2
+	$(LOG_INFO) "Evaluating the predicted labelling: $<" >&2
 	cat $< | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG)
 
 #---------------------------------------- CLEAN -------------------------------------------------------
