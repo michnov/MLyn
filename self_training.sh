@@ -70,8 +70,9 @@ function self_training() {
 
         ./log.sh INFO "Merging all newly labeled data..."
         #echo ${params[TRAIN_DATA]} >> $run_dir/iter_$iter/data.to_merge.list
-        train_data=$run_dir/iter_$iter/data/`basename $unlabeled_data`
+        train_data=$run_dir/iter_$iter/data/`basename "$unlabeled_data"`
         #cat $run_dir/iter_$iter/data.to_merge.list | xargs zcat | gzip -c > $train_data
+        ./log.sh DEBUG "TRAIN DATA: $train_data"
 
         ./log.sh INFO "Training and testing with the initial model: $label_model_path"
         echo $iter > $run_dir/iter_$iter/stats
