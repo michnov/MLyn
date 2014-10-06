@@ -1,6 +1,33 @@
 SHELL:=/bin/bash
 
-SCRIPT_DIR=scripts
+#--------------------------------------- HELP --------------------------------------------------------
+
+define HELP_TEXT
+Usage: make [preprocess | train | test | eval | clean]
+	- preprocess: does the feature filtering and transforms the training and testing data 
+		in the tab_space format into a format that can be consumed by the given ML method
+	- train: creates a model from the training data
+		* performs preprocess before 
+	- test: label the testing data using a trained model
+		* performs train before
+	- eval: calculates the score on the testing data
+		* performs test before
+
+	Parameters:
+		TRAIN_DATA : a path to the training data
+		TEST_DATA : a path to the testing data
+		RUN_DIR : a directory where all intermediate files are stored
+		FEAT_LIST : comma-separated list of features to use in a model; all features used if empty (default)
+		ML_METHOD : a ML method to be used (default = maxent)
+		ML_PARAMS : additional ML parameters (default = )
+		DATA_DIR : a directory with the data (default = $$RUN_DIR/data)
+		MODEL_DIR : a directory with the model (default = $$RUN_DIR/model)
+		RESULT_DIR : a directory with the result (default = $$RUN_DIR/result)
+endef
+
+export HELP_TEXT
+help :
+	@echo "$$HELP_TEXT"
 
 #----------- data ----------------
 #TRAIN_DATA
@@ -21,6 +48,8 @@ ML_PARAMS_HASH = $(shell echo "$(ML_PARAMS)" | shasum | cut -c 1-5)
 VW_APP=/net/cluster/TMP/mnovak/tools/vowpal_wabbit/vowpalwabbit/vw
 
 #-------- directories --------------
+
+SCRIPT_DIR=scripts
 
 RUN_DIR=tte.run_dir
 
@@ -143,33 +172,3 @@ eval : $(RESULT_FILE)
 clean : clean_test clean_train
 
 
-#--------------------------------------- HELP --------------------------------------------------------
-
-define HELP_TEXT
-Usage: make [preprocess | train | test | eval | clean]
-	- preprocess: does the feature filtering and transforms the training and testing data 
-		in the tab_space format into a format that can be consumed by the given ML method
-	- train: creates a model from the training data
-		* performs preprocess before 
-	- test: label the testing data using a trained model
-		* performs train before
-	- eval: calculates the score on the testing data
-		* performs test before
-
-	Parameters:
-		TRAIN_DATA : a path to the training data
-		TEST_DATA : a path to the testing data
-		RUN_DIR : a directory where all intermediate files are stored
-		FEAT_LIST : comma-separated list of features to use in a model; all features used if empty (default)
-		ML_METHOD : a ML method to be used (default = maxent)
-		ML_PARAMS : additional ML parameters (default = )
-		DATA_DIR : a directory with the data (default = $$RUN_DIR/data)
-		MODEL_DIR : a directory with the model (default = $$RUN_DIR/model)
-		RESULT_DIR : a directory with the result (default = $$RUN_DIR/result)
-endef
-
-export HELP_TEXT
-help :
-	@echo "$$HELP_TEXT"
-
-all : help
