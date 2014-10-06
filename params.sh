@@ -26,7 +26,8 @@ function load_params()
     config_script=`cat $config_file | grep -v "^#" | sed $sed_cmd`
     shift $(($OPTIND - 1))
     
-    config_script+=`echo "$@" | sed 's/ /\n/g' | sed $sed_cmd`
+    config_script+=`perl -e '$out = join " ", map {$_ =~ s/ /__SPACE__/g; $_} @ARGV; print $out;' "$@" |\
+        sed 's/ /\n/g' | sed 's/__SPACE__/ /g' | sed $sed_cmd`
     eval $config_script
 }
 

@@ -25,20 +25,23 @@ cat $run_dir/mlmethod_per_line.list | while read ml_method_info; do
     iter=`perl -e 'my $x = shift @ARGV; $x++; printf "%03s", $x;' $iter`
     
     ml_method=`echo $ml_method_info | cut -f1 -d':'`
-    ml_params="`echo $ml_method_info | cut -f2- -d':'`"
+    ml_params=`echo $ml_method_info | cut -f2- -d':'`
     ml_method_sha=`echo "$ml_method_info" | shasum | cut -c 1-5`
 
     run_subdir=$run_dir/$iter.$ml_method_sha.mlmethod
     mkdir -p $run_subdir
+    echo_err $run_subdir
 
     # print a header into a subprocess stats file
     echo $ml_method $ml_params >> $run_subdir/stats
+    echo_err $ml_method $ml_params
 
     run_in_parallel \
         "./run_experiment.sh \
             -f $config_file \
+            RUN_DIR=$run_subdir \
             ML_METHOD=$ml_method \
-            ML_PARAMS=$ml_params; \
+            ML_PARAMS='$ml_params'; \
             touch $run_subdir/done;" \
         "mlmethod_exper.$ml_method_sha" -20 $run_subdir/log 2
 done
