@@ -24,6 +24,6 @@ FILE_STEM := $(call data_stem, $(FILE))
 FILE_STEM_ASTERISK := $(call data_stem_asterisk, $(FILE))
 
 file_stem :
-	echo $(FILE_STEM)
+	echo "$(FILE_STEM)"
 file_stem_asterisk :
-	echo $(FILE_STEM_ASTERISK)
+	echo "$(FILE_STEM_ASTERISK)"
