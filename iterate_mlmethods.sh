@@ -40,12 +40,8 @@ function iterate_mlmethods() {
         ml_method_sha=`echo "$ml_method_info" | shasum | cut -c 1-5`
 
         run_subdir=$run_dir/$iter.$ml_method_sha.mlmethod
-        mkdir -p $run_subdir
+        #mkdir -p $run_subdir
         #echo_err $run_subdir
-
-        # print a header into a subprocess stats file
-        echo $ml_method $ml_params >> $run_subdir/stats
-        #echo_err $ml_method $ml_params
 
         ./log.sh INFO "Running an experiment no. $iter using the ML method $ml_method with params ($ml_params)"
         ./log.sh DEBUG "Its running directory is: $run_subdir"
@@ -73,5 +69,6 @@ function iterate_mlmethods() {
 
     # collect results
     ./log.sh INFO "Collecting results of the experiments to: $run_dir/stats"
-    paste $result_template $run_dir/*.mlmethod/stats >> $run_dir/stats
+    second_cols=`seq -s ',' 2 2 $(($mlmethods_count*2))`
+    paste $run_dir/*.mlmethod/stats | cut -f1,$second_cols >> $run_dir/stats
 }

@@ -93,5 +93,11 @@ function self_training() {
         fi
     done
 
-    paste $run_dir/iter_*/stats > $run_dir/stats
+    echo -n ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
+    if [ ${params[ML_PARAMS_FOR_UNLABELED]} != ${params[ML_PARAMS]} ]; then
+        echo "("${params[ML_PARAMS_FOR_UNLABELED]}")" > $run_dir/stats
+    else
+        echo > $run_dir/stats
+    fi
+    paste $run_dir/iter_*/stats >> $run_dir/stats
 }
