@@ -15,6 +15,7 @@ function self_training() {
     max_loss=${params[MAX_LOSS]}
     unlabeled_split_size=${params[UNLABELED_SPLIT_SIZE]}
     unlabeled_data=${params[UNLABELED_DATA]}
+    delible=${params[DELIBLE]}
     train_data=${params[TRAIN_DATA]}
     
     # check if the unlabeled data is a single file (and should be splitted) or it is multiple files defined by a wildcard
@@ -38,7 +39,7 @@ function self_training() {
     echo $iter > $run_dir/iter_$iter/stats
     make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TRAIN_DATA]} > >(tee -a $run_dir/iter_$iter/stats)
     make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TEST_DATA]} > >(tee -a $run_dir/iter_$iter/stats)
-    label_model_path=`make -s -f makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter`
+    init_model=`make -s -f makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter`
     #train_data_ready=`make -s -f makefile.preprocess data_ready_path CONFIG_FILE=$config_file DATA_DIR=$run_dir/data DATA=${params[TRAIN_DATA]}`
     for (( i=1; i<=$iter_count; i++ )); do
         old_iter=$iter
@@ -76,10 +77,14 @@ function self_training() {
         #cat $run_dir/iter_$iter/data.to_merge.list | xargs zcat | gzip -c > $train_data
         ./log.sh DEBUG "TRAIN DATA: $train_data"
 
-        ./log.sh INFO "Training and testing with the initial model: $label_model_path"
+        ./log.sh INFO "Training and testing with the initial model: $init_model"
         echo $iter > $run_dir/iter_$iter/stats
-        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$label_model_path > >(tee -a $run_dir/iter_$iter/stats)
-        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$label_model_path > >(tee -a $run_dir/iter_$iter/stats)
+        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$init_model > >(tee -a $run_dir/iter_$iter/stats)
+        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$init_model > >(tee -a $run_dir/iter_$iter/stats)
+
+        if [ ! -z $delible ]; then
+            init_model=`make -s -f makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data`
+        fi
     done
 
     paste $run_dir/iter_*/stats > $run_dir/stats
