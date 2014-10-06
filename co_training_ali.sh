@@ -6,6 +6,7 @@ function co_training_ali() {
     
     iter_count=${params[ITER_COUNT]-"10"}
     delible=${params[DELIBLE]}
+    split=${params[SPLIT]}
     l1_train_data=${params[L1_TRAIN_DATA]}
     l2_train_data=${params[L2_TRAIN_DATA]}
     
@@ -43,10 +44,9 @@ function co_training_ali() {
                 UNLABELED_DATA=$l1_unlabeled_data \
                 ML_PARAMS=\"$ml_params\" \
                 INITIAL_MODEL=$l1_init_model \
-                RUN_DIR=$run_dir/iter_$iter/l1;
+                RUN_DIR=$l1_iter_run_dir;
                 touch $run_dir/iter_$iter/done.semisup_iter.l1" \
             "semisup_iter.l1.$iter" -30 $run_dir/log 0
-        
         run_in_parallel \
             "$ML_FRAMEWORK_DIR/semisup_iter.sh -f $config_file \
                 TRAIN_DATA=$l2_train_data \
@@ -55,27 +55,37 @@ function co_training_ali() {
                 UNLABELED_DATA=$l2_unlabeled_data \
                 ML_PARAMS=\"$ml_params\" \
                 INITIAL_MODEL=$l2_init_model \
-                RUN_DIR=$run_dir/iter_$iter/l2;
+                RUN_DIR=$l2_iter_run_dir;
                 touch $run_dir/iter_$iter/done.semisup_iter.l2" \
             "semisup_iter.l2.$iter" -30 $run_dir/log 0
-
-        # wait until both experiments are acomplished
         wait_for_jobs $run_dir/iter_$iter/done.semisup_iter.* 2
 
-        l1_base=`basename $l1_unlabeled_data`
-        l2_base=`basename $l2_unlabeled_data`
+        l1_base=`basename "$l1_unlabeled_data"`
+        l2_base=`basename "$l2_unlabeled_data"`
 
-        l1_labeled_data=$run_dir/iter_$iter/l1/data/$l1_base
-        l2_labeled_data=$run_dir/iter_$iter/l2/data/$l2_base
-        
-        transfer_labels_via_align $l1_unlabeled_data $l2_labeled_data $run_dir/iter_$iter/l1
-        transfer_labels_via_align $l2_unlabeled_data $l1_labeled_data $run_dir/iter_$iter/l2
-        
-        wait_for_jobs $run_dir/iter_$iter/l1/done.aligned.* `ls $l1_unlabeled_data | wc -l`
-        wait_for_jobs $run_dir/iter_$iter/l2/done.aligned.* `ls $l2_unlabeled_data | wc -l`
+        # transfer the labeling via alignment
+        l1_labeled_data=$l1_iter_run_dir/data/$l1_base
+        l2_labeled_data=$l2_iter_run_dir/data/$l2_base
+        transfer_labels_via_align "$l1_unlabeled_data" "$l2_labeled_data" $l1_iter_run_dir
+        transfer_labels_via_align "$l2_unlabeled_data" "$l1_labeled_data" $l2_iter_run_dir
+        wait_for_jobs "$l1_iter_run_dir/done.aligned.*" `ls $l1_unlabeled_data | wc -l`
+        wait_for_jobs "$l2_iter_run_dir/done.aligned.*" `ls $l2_unlabeled_data | wc -l`
+        l1_align_labeled_data=$l1_iter_run_dir/data/aligned.$l1_base
+        l2_align_labeled_data=$l2_iter_run_dir/data/aligned.$l2_base
 
-        # TODO decide if split or not and set train_data for the net iteration
-        
+        # set params for the next iteration
+        if [ -z $split ]; then
+            l1_train_data="$l1_labeled_data $l1_align_labeled_data"
+            l2_train_data="$l2_labeled_data $l2_align_labeled_data"
+            $ML_FRAMEWORK_DIR/log.sh INFO "Not split; using both the labeled and align-transferred data as a training set for the next iteration."
+        else
+            l1_train_data=$l1_align_labeled_data
+            l2_train_data=$l2_align_labeled_data
+            $ML_FRAMEWORK_DIR/log.sh INFO "Split; using only the align-transferred data as a training set for the next iteration."
+        fi
+        $ML_FRAMEWORK_DIR/log.sh DEBUG "L1 train data: $l1_train_data"
+        $ML_FRAMEWORK_DIR/log.sh DEBUG "L2 train data: $l2_train_data"
+
         if [ -z $delible ]; then
             l1_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l1 TRAIN_DATA=$l1_train_data`
             l2_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l2 TRAIN_DATA=$l2_train_data`
@@ -92,8 +102,10 @@ function co_training_ali() {
     iter=`printf "%03d" $iter_count`
     mkdir -p $run_dir/iter_$iter
     echo $iter > $run_dir/iter_$iter/stats
-    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/stats
-    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/stats
+    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l1 TRAIN_DATA="$l1_train_data" TEST_DATA=${params[L1_TRAIN_DATA]} INITIAL_MODEL=$l1_init_model ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/l1/stats
+    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l1 TRAIN_DATA="$l1_train_data" TEST_DATA=${params[L1_TEST_DATA]} INITIAL_MODEL=$l1_init_model ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/l1/stats
+    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l2 TRAIN_DATA="$l2_train_data" TEST_DATA=${params[L2_TRAIN_DATA]} INITIAL_MODEL=$l2_init_model ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/l2/stats
+    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l2 TRAIN_DATA="$l2_train_data" TEST_DATA=${params[L2_TEST_DATA]} INITIAL_MODEL=$l2_init_model ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/l2/stats
 
     ############################ Collecting statistics #########################
     
@@ -116,21 +128,19 @@ function co_training_ali() {
 
 function transfer_labels_via_align()
 {
-    $l1_unlabeled_data=$1
-    $l2_labeled_data=$2
-    $run_dir=$3
+    local l1_unlabeled_data=$1
+    local l2_labeled_data=$2
+    local run_dir=$3
    
     # TODO output file + done file
-    file_i=1
     for file_part in $l1_unlabeled_data; do
         base=`basename $file_part`
         
         run_in_parallel \
             "zcat $l2_labeled_data | \
-            $ML_FRAMEWORK_DIR/scripts/select_aligned_instance.pl $file_part > $run_dir/data/aligned.$base; \
-            touch $run_dir/done.aligned.$base"
-        "select_ali.l1.$file_i" -50 $run_dir/log 0
-        
-        ((file_i++))
+            $ML_FRAMEWORK_DIR/scripts/select_aligned_instance.pl $file_part | \
+            gzip -c > $run_dir/data/aligned.$base; \
+            touch $run_dir/done.aligned.$base" \
+        "select_ali.$base" -50 $run_dir/log 0
     done
 }
