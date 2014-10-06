@@ -144,14 +144,21 @@ for (my $i = 0; $i < @table_lines; $i++) {
     elsif ($label eq "ITER") {
         $html_str .= iter(@rest);
     }
-    elsif ($label eq "TRAIN:") {
+    elsif ($label =~ /^TRAIN/) {
         my $tr_style = "";
         if ($rowspan == 1) {
             $tr_style = "style=\"border-style: none none solid none; border-width: 2px;\"";
         }
         $html_str .= results(\@rest, $tr_style);
     }
-    elsif ($label eq "DEV:" || $label eq "TEST:") {
+    elsif ($label eq "TEST_L1:") {
+        my $tr_style = "";
+        if ($rowspan == 1) {
+            $tr_style = "style=\"border-style: none none solid none; border-width: 4px;\"";
+        }
+        $html_str .= results(\@rest, $tr_style);
+    }
+    elsif ($label eq "DEV:" || $label eq "TEST:" || $label eq "TEST_L2:") {
         $html_str .= results(\@rest);
         if ($rowspan == 1) {
             $html_str .= "\n</table>";
