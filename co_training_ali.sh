@@ -37,7 +37,7 @@ function co_training_ali() {
 
         run_in_parallel \
             "$ML_FRAMEWORK_DIR/semisup_iter.sh -f $config_file \
-                TRAIN_DATA=$l1_train_data \
+                TRAIN_DATA=\"$l1_train_data\" \
                 TESTED_TRAIN_DATA=${params[L1_TRAIN_DATA]} \
                 TEST_DATA=${params[L1_TEST_DATA]} \
                 UNLABELED_DATA=$l1_unlabeled_data \
@@ -48,7 +48,7 @@ function co_training_ali() {
             "semisup_iter.l1.$iter" -30 $run_dir/log 0
         run_in_parallel \
             "$ML_FRAMEWORK_DIR/semisup_iter.sh -f $config_file \
-                TRAIN_DATA=$l2_train_data \
+                TRAIN_DATA=\"$l2_train_data\" \
                 TESTED_TRAIN_DATA=${params[L2_TRAIN_DATA]} \
                 TEST_DATA=${params[L2_TEST_DATA]} \
                 UNLABELED_DATA=$l2_unlabeled_data \
