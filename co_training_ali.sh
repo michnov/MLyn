@@ -5,8 +5,8 @@ function co_training_ali() {
     run_dir=${params[RUN_DIR]}
     
     iter_count=${params[ITER_COUNT]-"10"}
-    delible=${params[DELIBLE]}
-    split=${params[SPLIT]}
+    delible=${params[DELIBLE]-"0"}
+    split=${params[SPLIT]-"0"}
     l1_train_data=${params[L1_TRAIN_DATA]}
     l2_train_data=${params[L2_TRAIN_DATA]}
     
@@ -78,7 +78,7 @@ function co_training_ali() {
         cat $run_dir/iter_$iter/l2/stats >> $run_dir/iter_$iter/stats
 
         # set params for the next iteration
-        if [ -z $split ]; then
+        if [ $split -eq 0 ]; then
             l1_train_data="$l1_labeled_data $l1_align_labeled_data"
             l2_train_data="$l2_labeled_data $l2_align_labeled_data"
             $ML_FRAMEWORK_DIR/log.sh INFO "Not split; using both the labeled and align-transferred data as a training set for the next iteration."
@@ -90,7 +90,7 @@ function co_training_ali() {
         $ML_FRAMEWORK_DIR/log.sh DEBUG "L1 train data: $l1_train_data"
         $ML_FRAMEWORK_DIR/log.sh DEBUG "L2 train data: $l2_train_data"
 
-        if [ -z $delible ]; then
+        if [ $delible -eq 0 ]; then
             l1_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l1 TRAIN_DATA=$l1_train_data`
             l2_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l2 TRAIN_DATA=$l2_train_data`
             $ML_FRAMEWORK_DIR/log.sh INFO "Not delible; using cumulated models $l1_init_model and $l2_init_model as initial models for the next iteration."
