@@ -9,6 +9,7 @@ source iterate_featsets.sh
 source iterate_mlmethods.sh
 
 source train_test.sh
+source self_training.sh
 
 
 ###### ITERATE OVER FEATSETS #######
@@ -29,7 +30,7 @@ else
         case $exper_type in
             train_test) train_test ;;
             cross-valid) ;;
-            self-training) ./self_training.sh -f $config_file ;;
+            self-training) self_training ;;
             co-training_align) ;;
             *)  ./log.sh ERROR "Cannot recognize the type of an experiment: $exper_type" >&2;
                 exit
