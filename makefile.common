@@ -6,11 +6,6 @@ LOGGER=$(ML_FRAMEWORK_DIR)/log.sh
 LOG_INFO=$(LOGGER) INFO
 LOG_WARN=$(LOGGER) WARN
 
-#---------------------------------
-
-data_stem_asterisk = $(if $(filter %.table, $1),$(basename $(notdir $1)),$(notdir $1))
-data_stem = $(subst *,all,$(call data_stem_asterisk,$1))
-
 #------------ create directories -----------
 
 RUN_DIR=tte.run_dir
@@ -19,11 +14,3 @@ include $(ML_FRAMEWORK_DIR)/makefile.config
 
 $(RUN_DIR) :
 	mkdir $@
-
-FILE_STEM := $(call data_stem, $(FILE))
-FILE_STEM_ASTERISK := $(call data_stem_asterisk, $(FILE))
-
-file_stem :
-	echo "$(FILE_STEM)"
-file_stem_asterisk :
-	echo "$(FILE_STEM_ASTERISK)"

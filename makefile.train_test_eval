@@ -80,8 +80,8 @@ skuska :
 
 #----------- files ---------------
 
-TRAIN_DATA_STEM := $(call data_stem, $(TRAIN_DATA))
-TEST_DATA_STEM := $(call data_stem, $(TEST_DATA))
+TRAIN_DATA_STEM := $(shell $(SCRIPT_DIR)/file_stem.pl "$(TRAIN_DATA)")
+TEST_DATA_STEM := $(shell $(SCRIPT_DIR)/file_stem.pl "$(TEST_DATA)")
 
 MODEL_FILE = $(MODEL_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).model
 RESULT_FILE = $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).$(ML_METHOD).res

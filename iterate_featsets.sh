@@ -121,7 +121,11 @@ function run_on_featset {
 }
 
 function preprocessed_file_name() {
-    file_stem=`make -s -f $ML_FRAMEWORK_DIR/makefile.common file_stem_asterisk FILE="$1"`
-    filt_file=$2/$file_stem.table
-    echo "$filt_file"
+    ( set -f
+      for f in $1; do
+          file_stem=`$ML_FRAMEWORK_DIR/scripts/file_stem.pl --multi-out "$f"`
+          filt_file=$2/$file_stem.table
+          echo "$filt_file"
+      done
+    )
 }
