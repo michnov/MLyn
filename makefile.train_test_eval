@@ -163,7 +163,7 @@ clean_train:
 
 test : $(RESULT_FILE)
 
-$(RESULT_FILE) : _DATA_STEM=$(TEST_DATA_STEM) _DATA=$(TEST_DATA)
+$(RESULT_FILE) : _DATA=$(TEST_DATA)
 
 $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).res     : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
 	zcat $(word 2,$^) | $(SCRIPT_DIR)/maxent.test.pl $< > $@
