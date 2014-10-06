@@ -28,10 +28,11 @@ binmode STDOUT, ":utf8";
 #print STDERR Dumper(\@ids, \@cand_ids);
 
 my $USAGE = <<USAGE;
-Usage: $0 <language2_all_instances_unlabeled> --inst-id <id_name> <align_id_name> --cand-id <id_name> <align_id_name>
+Usage: $0 <language2_all_instances_unlabeled>
     - input: language1 filtered instances labeled
     - output: language2 filtered instances labeled
     - selects from language2_all_instances those, which are aligned with language1_filtered_instances
+    - counterparts are identified using the ids in comments
 USAGE
 
 if (@ARGV < 1) {
@@ -41,7 +42,14 @@ if (@ARGV < 1) {
 
 my %ids_h = ();
 
+my $inst_num = 0;
 while ( my ($feats, $losses, $tag, $comment) = Treex::Tool::ML::VowpalWabbit::Util::parse_multiline(*STDIN, {parse_feats => 'no'}) ) {
+
+    if ($inst_num % 10000 == 0) {
+        log_info "Loaded instances: $inst_num";
+    }
+    $inst_num++;
+
     my ($cand_cmt, $shared_cmt) = @$comment;
     my ($inst_id, $inst_ali_id) = parse_cmt($shared_cmt);
     #print "ID: $inst_id" . "\n";
@@ -76,44 +84,21 @@ while ( my ($feats, $losses, $tag, $comment) = Treex::Tool::ML::VowpalWabbit::Ut
         log_info "No aligned candidates for an instance " . $inst_id;
     }
 
-#    my ($cands_feats, $shared_feats) = @$feats;
-#    my %shared_feats_h = map {$_->[0] => $_->[1]} @$shared_feats;
-#    my $id = $shared_feats_h{$ids[0]};
-#    my $align_id = $shared_feats_h{$ids[1]};
-#    
-#    my %cands_align_ids = ();
-#    my @cands_idx = grep {$losses->[$_] == 0} 0 .. $#$losses;
-#    my @ok_cands_feats = @$cands_feats[@cands_idx];
-#    foreach my $ok_cand_feats (@ok_cands_feats) {
-#        my %cand_feats_h = map {$_->[0] => $_->[1]} @$ok_cand_feats;
-#        if ($cand_feats_h{__SELF__}) {
-#            $cands_align_ids{__SELF__} = 1;
-#            next;
-#        }
-#        my $cand_id = $cand_feats_h{$cand_ids[0]};
-#        my $cand_align_id = $cand_feats_h{$cand_ids[1]};
-#        if (!defined $cand_align_id) {
-#            log_info "No feature '" . $cand_ids[1] . "' for a candidate " . $cand_id;
-#            next;
-#        }
-#        $cands_align_ids{$cand_align_id} = 1;
-#    }
-#    if (%cands_align_ids) {
-#        if (defined $ids_h{$align_id}) {
-#            log_warn "Already processed align_id: " . $align_id;
-#        }
-#        #print STDERR "OK: " . $id . "\n";
-#        $ids_h{$align_id} = \%cands_align_ids;
-#    }
-#    else {
-#        log_info "No aligned positive candidates for an instance " . $id;
-#    }
 }
 
 #print STDERR Dumper(\%ids_h);
 
+$inst_num = 0;
+my $selected_num = 0;
+
 open my $filt_fh, "<:gzip:utf8", $ARGV[0];
 while ( my ($feats, $old_losses, $tag, $comment) = Treex::Tool::ML::VowpalWabbit::Util::parse_multiline($filt_fh, {parse_feats => 'no'}) ) {
+    
+    if ($inst_num % 10000 == 0) {
+        log_info "Instances selected and processed: $selected_num / $inst_num";
+    }
+    $inst_num++;
+    
     my ($cand_cmt, $shared_cmt) = @$comment;
     my ($inst_id, $inst_ali_id) = parse_cmt($shared_cmt);
     if (!defined $ids_h{$inst_id}) {
@@ -140,44 +125,10 @@ while ( my ($feats, $old_losses, $tag, $comment) = Treex::Tool::ML::VowpalWabbit
     # only if discretized losses
     if (any {$_ == 0} @new_losses) {
         print Treex::Tool::ML::VowpalWabbit::Util::format_multiline($feats, \@new_losses, $comment);
+        $selected_num++;
     }
     else {
-        log_info "No positive candidates in the instance: " . $inst_id;
+        #log_info "No positive candidates in the instance: " . $inst_id;
     }
-     
-    
-#    my ($cands_feats, $shared_feats) = @$feats;
-#    my %shared_feats_h = map {$_->[0] => $_->[1]} @$shared_feats;
-#    my $id = $shared_feats_h{$ids[0]};
-#    my $align_id = $shared_feats_h{$ids[1]};
-#    
-#    my @new_losses = ();
-#    my $has_positive = 0;
-#    my %cands_align_ids = ();
-#    foreach my $cand_feats (@$cands_feats) {
-#        my %cand_feats_h = map {$_->[0] => $_->[1]} @$cand_feats;
-#        if ($cand_feats_h{__SELF__}) {
-#            if ($ids_h{$id}{__SELF__}) {
-#                push @new_losses, 0;
-#                $has_positive = 1;
-#            }
-#            else {
-#                push @new_losses, 1;
-#            }
-#            next;
-#        }
-#        my $cand_id = $cand_feats_h{$cand_ids[0]};
-#        if (defined $ids_h{$id}{$cand_id}) {
-#            push @new_losses, 0;
-#            $has_positive = 1;
-#        }
-#        else {
-#            push @new_losses, 1;
-#        }
-#    }
-#    if ($has_positive) {
-#        #print STDERR "ALIGN_OK: " . $align_id . "\n";
-#        print Treex::Tool::ML::VowpalWabbit::Util::format_multiline($feats, \@new_losses);
-#    }
 }
 close $filt_fh;
