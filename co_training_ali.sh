@@ -61,6 +61,20 @@ function co_training_ali() {
 
         # wait until both experiments are acomplished
         wait_for_jobs $run_dir/iter_$iter/done.semisup_iter.* 2
+
+        l1_base=`basename $l1_unlabeled_data`
+        l2_base=`basename $l2_unlabeled_data`
+
+        l1_labeled_data=$run_dir/iter_$iter/l1/data/$l1_base
+        l2_labeled_data=$run_dir/iter_$iter/l2/data/$l2_base
+        
+        transfer_labels_via_align $l1_unlabeled_data $l2_labeled_data $run_dir/iter_$iter/l1
+        transfer_labels_via_align $l2_unlabeled_data $l1_labeled_data $run_dir/iter_$iter/l2
+        
+        wait_for_jobs $run_dir/iter_$iter/l1/done.aligned.* `ls $l1_unlabeled_data | wc -l`
+        wait_for_jobs $run_dir/iter_$iter/l2/done.aligned.* `ls $l2_unlabeled_data | wc -l`
+
+        # TODO decide if split or not and set train_data for the net iteration
         
         if [ -z $delible ]; then
             l1_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l1 TRAIN_DATA=$l1_train_data`
@@ -71,8 +85,6 @@ function co_training_ali() {
             l2_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_000/l2 TRAIN_DATA=${params[L2_TRAIN_DATA]}`
             $ML_FRAMEWORK_DIR/log.sh INFO "Delible; using gold-labeled models $l1_init_model and $l2_init_model as initial models for the next iteration."
         fi
-        l1_train_data=$run_dir/iter_$iter/l1/data/`basename "$l1_unlabeled_data"`
-        l2_train_data=$run_dir/iter_$iter/l2/data/`basename "$l2_unlabeled_data"`
         ml_params=${params[ML_PARAMS_FOR_UNLABELED]}
     done
 
@@ -100,4 +112,25 @@ function co_training_ali() {
     paste $run_dir/stats.header $run_dir/iter_*/stats >> $run_dir/stats
     sed -i 's/$/|/' $run_dir/stats
     rm $run_dir/stats.header
+}
+
+function transfer_labels_via_align()
+{
+    $l1_unlabeled_data=$1
+    $l2_labeled_data=$2
+    $run_dir=$3
+   
+    # TODO output file + done file
+    file_i=1
+    for file_part in $l1_unlabeled_data; do
+        base=`basename $file_part`
+        
+        run_in_parallel \
+            "zcat $l2_labeled_data | \
+            $ML_FRAMEWORK_DIR/scripts/select_aligned_instance.pl $file_part > $run_dir/data/aligned.$base; \
+            touch $run_dir/done.aligned.$base"
+        "select_ali.l1.$file_i" -50 $run_dir/log 0
+        
+        ((file_i++))
+    done
 }
