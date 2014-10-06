@@ -64,7 +64,7 @@ $(MODEL_DIR) $(RESULT_DIR) : | $(RUN_DIR)
 #========== reading variables from a config file ================
 # this must be placed after all definitions of public variables
 
-include makefile.config
+include $(ML_FRAMEWORK_DIR)/makefile.config
 
 #----------- skuska --------------
 
