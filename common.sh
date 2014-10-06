@@ -22,3 +22,14 @@ function run_in_parallel()
 function echo_err() {
     echo "$@" >&2
 }
+
+function print_ranking_header() {
+    if [ -z $1 ]; then
+        echo "TRAIN:"
+    else
+        echo "$1:"
+    fi
+    echo
+    echo
+    echo
+}

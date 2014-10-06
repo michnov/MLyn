@@ -1,12 +1,11 @@
 #!/bin/bash
 
-
 function self_training() {
     #source common.sh
     #source params.sh
 
     run_dir=${params[RUN_DIR]}
-
+    
     #config_file=$run_dir/config
 
     ###################################
@@ -38,11 +37,11 @@ function self_training() {
     
     mkdir -p $run_dir/iter_$iter
     echo $iter > $run_dir/iter_$iter/stats
-    make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TRAIN_DATA]} > >(tee -a $run_dir/iter_$iter/stats)
-    make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TEST_DATA]} > >(tee -a $run_dir/iter_$iter/stats)
+    make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TRAIN_DATA]} >> $run_dir/iter_$iter/stats
+    make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TEST_DATA]} >> $run_dir/iter_$iter/stats
     init_model=`make -s -f makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter`
 
-    if [ ! -z ${params[ML_PARAMS_FOR_UNLABELED]} ]; then
+    if [ -z "${params[ML_PARAMS_FOR_UNLABELED]}" ]; then
         params[ML_PARAMS_FOR_UNLABELED]=${params[ML_PARAMS]}
     fi
 
@@ -85,19 +84,26 @@ function self_training() {
 
         ./log.sh INFO "Training and testing with the initial model: $init_model"
         echo $iter > $run_dir/iter_$iter/stats
-        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="${params[ML_PARAMS_FOR_UNLABELED]}" > >(tee -a $run_dir/iter_$iter/stats)
-        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="${params[ML_PARAMS_FOR_UNLABELED]}" > >(tee -a $run_dir/iter_$iter/stats)
+        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="${params[ML_PARAMS_FOR_UNLABELED]}" >> $run_dir/iter_$iter/stats
+        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="${params[ML_PARAMS_FOR_UNLABELED]}" >> $run_dir/iter_$iter/stats
 
         if [ ! -z $delible ]; then
             init_model=`make -s -f makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data`
         fi
     done
 
-    echo -n ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
+    echo -en "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
     if [ ${params[ML_PARAMS_FOR_UNLABELED]} != ${params[ML_PARAMS]} ]; then
         echo "("${params[ML_PARAMS_FOR_UNLABELED]}")" > $run_dir/stats
     else
         echo > $run_dir/stats
     fi
-    paste $run_dir/iter_*/stats >> $run_dir/stats
+    # a header used for iter results
+    echo "ITER" > $run_dir/stats.header
+    print_ranking_header "TRAIN" >> $run_dir/stats.header
+    print_ranking_header "TEST" >> $run_dir/stats.header
+    
+    echo -e "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
+    paste $run_dir/stats.header $run_dir/iter_*/stats >> $run_dir/stats
+    rm $run_dir/stats.header
 }

@@ -69,6 +69,13 @@ function iterate_mlmethods() {
 
     # collect results
     ./log.sh INFO "Collecting results of the experiments to: $run_dir/stats"
-    second_cols=`seq -s ',' 2 2 $(($mlmethods_count*2))`
-    paste $run_dir/*.mlmethod/stats | cut -f1,$second_cols >> $run_dir/stats
+    i=0
+    for stats_part in $run_dir/*.mlmethod/stats; do
+        if [ $i -eq 0 ]; then
+            cat $stats_part | cut -f1 > $run_dir/stats
+        fi
+        cat $stats_part | cut -f1 --complement | paste $run_dir/stats - > $run_dir/stats.tmp
+        cp $run_dir/stats.tmp $run_dir/stats
+        rm $run_dir/stats.tmp
+    done
 }
