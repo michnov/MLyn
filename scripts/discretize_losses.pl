@@ -4,7 +4,7 @@ use warnings;
 use strict;
 
 use Getopt::Long;
-use Treex::Tool::ML::TabSpace::Util;
+use Treex::Tool::ML::VowpalWabbit::Util;
 use List::Util qw/min/;
 
 binmode STDIN, ":utf8";
@@ -29,7 +29,7 @@ if ($help) {
     exit;
 }
 
-while ( my $instance = Treex::Tool::ML::TabSpace::Util::parse_multiline(*STDIN) ) {
+while ( my ($instance, $tags, $comments) = Treex::Tool::ML::VowpalWabbit::Util::parse_multiline(*STDIN) ) {
     my ($feats, $losses) = @$instance;
     my @new_losses;
     if (!defined $max_loss) {
@@ -39,5 +39,5 @@ while ( my $instance = Treex::Tool::ML::TabSpace::Util::parse_multiline(*STDIN) 
     else {
         @new_losses = map {$_ <= $max_loss ? 0 : 1} @$losses;
     }
-    print Treex::Tool::ML::TabSpace::Util::format_multiline($feats, \@new_losses);
+    print Treex::Tool::ML::VowpalWabbit::Util::format_multiline($feats, \@new_losses, $comments);
 }
