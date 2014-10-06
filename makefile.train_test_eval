@@ -1,5 +1,10 @@
 SHELL:=/bin/bash
 
+ifdef CONFIG_FILE
+CONFIG_CMD:=$(shell cat $(CONFIG_FILE))
+$(foreach ONE_CMD,$(CONFIG_CMD),$(eval $(ONE_CMD)))
+endif
+
 #--------------------------------------- HELP --------------------------------------------------------
 
 define HELP_TEXT
@@ -33,6 +38,7 @@ help :
 #TRAIN_DATA
 #TEST_DATA
 #------------------------------------------- ML ---------------------------------------------------
+
 
 ML_METHOD=maxent
 #ML_METHOD=vw
