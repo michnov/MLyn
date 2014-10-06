@@ -93,9 +93,12 @@ function run_on_featset {
         
         for orig_file in $data; do
             filt_file=`preprocessed_file_name $orig_file $data_dir`
+
+            if [ ! -e $orig_file ]; then
+                $ML_FRAMEWORK_DIR/log.sh WARN "File $filt_file does not exist."
             
             # preprocess only if the result doesn't exist or is older
-            if [ $filt_file -ot $orig_file ]; then
+            elif [ $filt_file -ot $orig_file ]; then
                 $ML_FRAMEWORK_DIR/log.sh INFO "Preprocessing data: $orig_file => $filt_file"
                 iter=`printf "%03d" $i`
                 run_in_parallel \
