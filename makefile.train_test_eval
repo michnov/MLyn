@@ -21,7 +21,6 @@ Usage: make [train | test | eval | clean]
 		RUN_DIR : a directory where all intermediate files are stored
 		ML_METHOD : a ML method to be used (default = maxent)
 		ML_PARAMS : additional ML parameters (default = )
-		DATA_DIR : a directory with the data (default = $$RUN_DIR/data)
 		MODEL_DIR : a directory with the model (default = $$RUN_DIR/model)
 		RESULT_DIR : a directory with the result (default = $$RUN_DIR/result)
 endef
