@@ -14,6 +14,8 @@ function co_training_ali() {
     # check if the unlabeled data is a single file (and should be splitted) or it is multiple files defined by a wildcard
     l1_unlabeled_data=`$ML_FRAMEWORK_DIR/scripts/data_split.sh "${params[L1_UNLABELED_DATA]}" ${params[UNLABELED_SPLIT_SIZE]} $run_dir`
     l2_unlabeled_data=`$ML_FRAMEWORK_DIR/scripts/data_split.sh "${params[L2_UNLABELED_DATA]}" ${params[UNLABELED_SPLIT_SIZE]} $run_dir`
+    $ML_FRAMEWORK_DIR/log.sh DEBUG "L1_UNLAB_DATA: $l1_unlabeled_data"
+    $ML_FRAMEWORK_DIR/log.sh DEBUG "L2_UNLAB_DATA: $l2_unlabeled_data"
     
     ######################## Self-training iterations ##########################
     
@@ -30,6 +32,9 @@ function co_training_ali() {
         mkdir -p $run_dir/iter_$iter
         echo $iter > $run_dir/iter_$iter/stats
 
+        l1_iter_run_dir=$run_dir/iter_$iter/l1
+        l2_iter_run_dir=$run_dir/iter_$iter/l2
+
         run_in_parallel \
             "$ML_FRAMEWORK_DIR/semisup_iter.sh -f $config_file \
                 TRAIN_DATA=$l1_train_data \
@@ -38,7 +43,7 @@ function co_training_ali() {
                 UNLABELED_DATA=$l1_unlabeled_data \
                 ML_PARAMS=\"$ml_params\" \
                 INITIAL_MODEL=$l1_init_model \
-                RUN_DIR=$run_dir/iter_$iter;
+                RUN_DIR=$run_dir/iter_$iter/l1;
                 touch $run_dir/iter_$iter/done.semisup_iter.l1" \
             "semisup_iter.l1.$iter" -30 $run_dir/log 0
         
@@ -46,11 +51,11 @@ function co_training_ali() {
             "$ML_FRAMEWORK_DIR/semisup_iter.sh -f $config_file \
                 TRAIN_DATA=$l2_train_data \
                 TESTED_TRAIN_DATA=${params[L2_TRAIN_DATA]} \
-                TEST_DATA=${params[L2_TEST_DATA]}
+                TEST_DATA=${params[L2_TEST_DATA]} \
                 UNLABELED_DATA=$l2_unlabeled_data \
                 ML_PARAMS=\"$ml_params\" \
                 INITIAL_MODEL=$l2_init_model \
-                RUN_DIR=$run_dir/iter_$iter;
+                RUN_DIR=$run_dir/iter_$iter/l2;
                 touch $run_dir/iter_$iter/done.semisup_iter.l2" \
             "semisup_iter.l2.$iter" -30 $run_dir/log 0
 
@@ -63,16 +68,16 @@ function co_training_ali() {
 
             
         if [ -z $delible ]; then
-            l1_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$l1_train_data`
-            l2_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$l2_train_data`
+            l1_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l1 TRAIN_DATA=$l1_train_data`
+            l2_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l2 TRAIN_DATA=$l2_train_data`
             $ML_FRAMEWORK_DIR/log.sh INFO "Not delible; using cumulated models $l1_init_model and $l2_init_model as initial models for the next iteration."
         else
-            l1_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_000 TRAIN_DATA=${params[L1_TRAIN_DATA]}`
-            l2_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_000 TRAIN_DATA=${params[L2_TRAIN_DATA]}`
+            l1_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_000/l1 TRAIN_DATA=${params[L1_TRAIN_DATA]}`
+            l2_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_000/l2 TRAIN_DATA=${params[L2_TRAIN_DATA]}`
             $ML_FRAMEWORK_DIR/log.sh INFO "Delible; using gold-labeled models $l1_init_model and $l2_init_model as initial models for the next iteration."
         fi
-        l1_train_data=$run_dir/iter_$iter/data/`basename "$l1_unlabeled_data"`
-        l2_train_data=$run_dir/iter_$iter/data/`basename "$l2_unlabeled_data"`
+        l1_train_data=$run_dir/iter_$iter/l1/data/`basename "$l1_unlabeled_data"`
+        l2_train_data=$run_dir/iter_$iter/l2/data/`basename "$l2_unlabeled_data"`
         ml_params=${params[ML_PARAMS_FOR_UNLABELED]}
     done
 
