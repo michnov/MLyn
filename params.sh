@@ -44,9 +44,7 @@ function save_params()
     done
 }
 
-#declare -A params
-#load_params params "$@"
-#echo "POzdrav: ${params[file]}"
-#echo "Blbost: ${params[skuska]}"
-#echo "ROBO: ${params[ROBO]}"
-#echo "FUCK: ${params[FUCK]}"
+declare -A params
+load_params params "$@"
+mkdir -p ${params[RUN_DIR]}
+save_params params ${params[RUN_DIR]}/config
