@@ -22,7 +22,7 @@ function load_params()
         esac
     done
 
-    ./log.sh DEBUG "Loading parameters..."
+    $ML_FRAMEWORK_DIR/log.sh DEBUG "Loading parameters..."
 
    
     # this should disregard all lines starting with #
@@ -50,7 +50,7 @@ function save_params()
 {
     config_var=$1
     output_file=$2
-    ./log.sh DEBUG "Saving parameters into $output_file"
+    $ML_FRAMEWORK_DIR/log.sh DEBUG "Saving parameters into $output_file"
     if [ -f $output_file ]; then
         rm $output_file;
     fi
@@ -66,7 +66,7 @@ function prepare_run_dir()
     if [ -z ${params[DATE]} ]; then
         params[DATE]=`date +%Y-%m-%d_%H-%M-%S`
     fi
-    ./log.sh DEBUG "DATE = "${params[DATE]}
+    $ML_FRAMEWORK_DIR/log.sh DEBUG "DATE = "${params[DATE]}
     if [ -z ${params[RUN_DIR]} ]; then
         if [ ! -z ${params[TMP_DIR]} ]; then
             params[RUN_DIR]=${params[TMP_DIR]}/run_${params[DATE]}

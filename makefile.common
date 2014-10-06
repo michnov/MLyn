@@ -2,7 +2,7 @@ SHELL:=/bin/bash
 
 #---------------------------------
 
-LOGGER=./log.sh
+LOGGER=$(ML_FRAMEWORK_DIR)/log.sh
 LOG_INFO=$(LOGGER) INFO
 LOG_WARN=$(LOGGER) WARN
 
@@ -15,7 +15,7 @@ data_stem = $(subst *,all,$(call data_stem_asterisk,$1))
 
 RUN_DIR=tte.run_dir
 
-include makefile.config
+include $(ML_FRAMEWORK_DIR)/makefile.config
 
 $(RUN_DIR) :
 	mkdir $@

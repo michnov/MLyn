@@ -1,17 +1,17 @@
 #!/bin/bash
 
-source common.sh
-source params.sh
+source $ML_FRAMEWORK_DIR/common.sh
+source $ML_FRAMEWORK_DIR/params.sh
 prepare_run_dir
 
 config_file=${params[RUN_DIR]}/config
 save_params params $config_file
 
-source iterate_featsets.sh
-source iterate_mlmethods.sh
+source $ML_FRAMEWORK_DIR/iterate_featsets.sh
+source $ML_FRAMEWORK_DIR/iterate_mlmethods.sh
 
-source train_test.sh
-source self_training.sh
+source $ML_FRAMEWORK_DIR/train_test.sh
+source $ML_FRAMEWORK_DIR/self_training.sh
 
 
 ###### ITERATE OVER FEATSETS #######
@@ -34,7 +34,7 @@ else
             cross-valid) ;;
             self-training) self_training ;;
             co-training_align) ;;
-            *)  ./log.sh ERROR "Cannot recognize the type of an experiment: $exper_type" >&2;
+            *)  $ML_FRAMEWORK_DIR/log.sh ERROR "Cannot recognize the type of an experiment: $exper_type" >&2;
                 exit
                 ;;
         esac

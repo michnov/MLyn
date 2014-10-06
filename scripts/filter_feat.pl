@@ -5,6 +5,7 @@ use warnings;
 
 use Treex::Tool::ML::VowpalWabbit::Util;
 use Getopt::Long;
+use Data::Dumper;
 
 my $in = '';
 my $out = '';
@@ -30,7 +31,7 @@ if (keys %in_hash > 0) {
 }
 
 while ( my ($feats, @rest) = Treex::Tool::ML::VowpalWabbit::Util::parse_singleline(*STDIN, {parse_feats => 'pair'}) ) {
-    if (!defined $feats) {
+    if (!@$feats) {
         print "\n";
         next;
     }

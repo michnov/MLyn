@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#source common.sh
-#source params.sh
+#source $ML_FRAMEWORK_DIR/common.sh
+#source $ML_FRAMEWORK_DIR/params.sh
 
 
 #config_file=$run_dir/config
@@ -16,8 +16,8 @@ function train_test() {
     train_data=${params[TRAIN_DATA]}
     test_data=${params[TEST_DATA]}
 
-    make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file TRAIN_DATA=$train_data TEST_DATA=$train_data > $run_dir/stats.numbers
-    make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file TRAIN_DATA=$train_data TEST_DATA=$test_data >> $run_dir/stats.numbers
+    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file TRAIN_DATA=$train_data TEST_DATA=$train_data > $run_dir/stats.numbers
+    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file TRAIN_DATA=$train_data TEST_DATA=$test_data >> $run_dir/stats.numbers
     
     # printing the results
     echo -e "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats

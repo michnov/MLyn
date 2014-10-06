@@ -1,8 +1,8 @@
 #!/bin/bash
 
 function self_training() {
-    #source common.sh
-    #source params.sh
+    #source $ML_FRAMEWORK_DIR/common.sh
+    #source $ML_FRAMEWORK_DIR/params.sh
 
     run_dir=${params[RUN_DIR]}
     
@@ -21,31 +21,31 @@ function self_training() {
     unlabeled_count=`ls $unlabeled_data | wc -l`
     if [ $unlabeled_count -eq 1 ]; then
         if [ ! -z $unlabeled_split_size ]; then
-            ./log.sh DEBUG "UNLABELED SPLIT SIZE = $unlabeled_split_size"
-            file_stem=`make -s -f makefile.common file_stem FILE=$unlabeled_data`
-            zcat $unlabeled_data | scripts/split_on_empty_line.pl $unlabeled_split_size $run_dir/data/$data_stem.part
+            $ML_FRAMEWORK_DIR/log.sh DEBUG "UNLABELED SPLIT SIZE = $unlabeled_split_size"
+            file_stem=`make -s -f $ML_FRAMEWORK_DIR/makefile.common file_stem FILE=$unlabeled_data`
+            zcat $unlabeled_data | $ML_FRAMEWORK_DIR/scripts/split_on_empty_line.pl $unlabeled_split_size $run_dir/data/$data_stem.part
             unlabeled_data=$run_dir/data/$data_stem.part*
         fi
     elif [ $unlabeled_count -eq 0 ]; then
-        ./log.sh ERROR "UNLABELED_DATA must be defined."
+        $ML_FRAMEWORK_DIR/log.sh ERROR "UNLABELED_DATA must be defined."
         exit 1
     fi
-    ./log.sh DEBUG "Unlabeled data stored in: $unlabeled_data"
+    $ML_FRAMEWORK_DIR/log.sh DEBUG "Unlabeled data stored in: $unlabeled_data"
 
     i=0
     iter=`printf "%03d" $i`
     
     mkdir -p $run_dir/iter_$iter
     echo $iter > $run_dir/iter_$iter/stats
-    make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TRAIN_DATA]} >> $run_dir/iter_$iter/stats
-    make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TEST_DATA]} >> $run_dir/iter_$iter/stats
-    init_model=`make -s -f makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter`
+    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TRAIN_DATA]} >> $run_dir/iter_$iter/stats
+    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TEST_DATA]} >> $run_dir/iter_$iter/stats
+    init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter`
 
     if [ -z "${params[ML_PARAMS_FOR_UNLABELED]}" ]; then
         params[ML_PARAMS_FOR_UNLABELED]=${params[ML_PARAMS]}
     fi
 
-    #train_data_ready=`make -s -f makefile.preprocess data_ready_path CONFIG_FILE=$config_file DATA_DIR=$run_dir/data DATA=${params[TRAIN_DATA]}`
+    #train_data_ready=`make -s -f $ML_FRAMEWORK_DIR/makefile.preprocess data_ready_path CONFIG_FILE=$config_file DATA_DIR=$run_dir/data DATA=${params[TRAIN_DATA]}`
     for (( i=1; i<=$iter_count; i++ )); do
         old_iter=$iter
         iter=`printf "%03d" $i`
@@ -54,14 +54,14 @@ function self_training() {
         for file_part in $unlabeled_data; do
             file_i_str=`printf "%03d" $file_i`
             
-            result_file=`make -s -f makefile.train_test_eval result_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$old_iter TRAIN_DATA=$train_data TEST_DATA=$file_part`
+            result_file=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval result_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$old_iter TRAIN_DATA=$train_data TEST_DATA=$file_part`
             sys_labeled_data=$run_dir/iter_$iter/data/`basename $file_part`
             
             run_in_parallel \
-                "make -s -f makefile.train_test_eval test CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$old_iter TRAIN_DATA=$train_data TEST_DATA=$file_part; \
+                "make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval test CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$old_iter TRAIN_DATA=$train_data TEST_DATA=$file_part; \
                     mkdir -p $run_dir/iter_$iter/data; \
-                    ./log.sh INFO \"Adding system labels to the unlabeled data, if the minimum loss is <= $max_loss: $file_part + $result_file => $sys_labeled_data\"; \
-                    scripts/paste_data_results.sh $file_part $result_file | scripts/filter_by_loss.pl $max_loss | scripts/discretize_losses.pl | gzip -c > $sys_labeled_data; \
+                    $ML_FRAMEWORK_DIR/log.sh INFO \"Adding system labels to the unlabeled data, if the minimum loss is <= $max_loss: $file_part + $result_file => $sys_labeled_data\"; \
+                    $ML_FRAMEWORK_DIR/scripts/paste_data_results.sh $file_part $result_file | $ML_FRAMEWORK_DIR/scripts/filter_by_loss.pl $max_loss | $ML_FRAMEWORK_DIR/scripts/discretize_losses.pl | gzip -c > $sys_labeled_data; \
                     touch $run_dir/iter_$iter/done.$file_i_str" \
                 "unlabeled.part.$file_i_str" -50 $run_dir/iter_$iter/log 0
 
@@ -70,28 +70,28 @@ function self_training() {
         done
 
         # wait until all experiments are acomplished
-        ./log.sh INFO "Waiting for all the experiments to be completed..."
+        $ML_FRAMEWORK_DIR/log.sh INFO "Waiting for all the experiments to be completed..."
         while [ `ls $run_dir/iter_$iter/done.* 2> /dev/null | wc -l` -lt $unlabeled_count ]; do
-            ./log.sh DEBUG `ls $run_dir/iter_$iter/done.* 2> /dev/null | wc -l` $unlabeled_count
+            $ML_FRAMEWORK_DIR/log.sh DEBUG `ls $run_dir/iter_$iter/done.* 2> /dev/null | wc -l` $unlabeled_count
             sleep 10
         done
 
-        ./log.sh INFO "Merging all newly labeled data..."
+        $ML_FRAMEWORK_DIR/log.sh INFO "Merging all newly labeled data..."
         #echo ${params[TRAIN_DATA]} >> $run_dir/iter_$iter/data.to_merge.list
         train_data=$run_dir/iter_$iter/data/`basename "$unlabeled_data"`
         #cat $run_dir/iter_$iter/data.to_merge.list | xargs zcat | gzip -c > $train_data
-        ./log.sh DEBUG "TRAIN DATA: $train_data"
+        $ML_FRAMEWORK_DIR/log.sh DEBUG "TRAIN DATA: $train_data"
 
-        ./log.sh INFO "Training and testing with the initial model: $init_model"
+        $ML_FRAMEWORK_DIR/log.sh INFO "Training and testing with the initial model: $init_model"
         echo $iter > $run_dir/iter_$iter/stats
-        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="${params[ML_PARAMS_FOR_UNLABELED]}" >> $run_dir/iter_$iter/stats
-        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="${params[ML_PARAMS_FOR_UNLABELED]}" >> $run_dir/iter_$iter/stats
+        make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="${params[ML_PARAMS_FOR_UNLABELED]}" >> $run_dir/iter_$iter/stats
+        make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="${params[ML_PARAMS_FOR_UNLABELED]}" >> $run_dir/iter_$iter/stats
 
         if [ -z $delible ]; then
-            init_model=`make -s -f makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data`
-            ./log.sh INFO "Not delible; using cumulated model $init_model as an initial model for the next iteration."
+            init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data`
+            $ML_FRAMEWORK_DIR/log.sh INFO "Not delible; using cumulated model $init_model as an initial model for the next iteration."
         else
-            ./log.sh INFO "Delible; using gold-labeled model $init_model as an initial model for the next iteration."
+            $ML_FRAMEWORK_DIR/log.sh INFO "Delible; using gold-labeled model $init_model as an initial model for the next iteration."
         fi
     done
 

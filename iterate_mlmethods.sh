@@ -2,10 +2,10 @@
 
 
 function iterate_mlmethods() {
-    #./log.sh INFO "Running $0..."
+    #$ML_FRAMEWORK_DIR/log.sh INFO "Running $0..."
 
-    #source common.sh
-    #source params.sh
+    #source $ML_FRAMEWORK_DIR/common.sh
+    #source $ML_FRAMEWORK_DIR/params.sh
 
     #config_file=${params[RUN_DIR]}/config
 
@@ -16,7 +16,7 @@ function iterate_mlmethods() {
 
     result_template=conf/result.template
 
-    ./log.sh DEBUG "Filtering the ML method list: $mlmethod_list => $run_dir/mlmethod_per_line.list"
+    $ML_FRAMEWORK_DIR/log.sh DEBUG "Filtering the ML method list: $mlmethod_list => $run_dir/mlmethod_per_line.list"
     cat $mlmethod_list | grep -v "^#" > $run_dir/mlmethod_per_line.list
     if [ ${params[RANKING]}. == 1. ]; then
         cat $run_dir/mlmethod_per_line.list | grep "ranking" > $run_dir/mlmethod_per_line.list.tmp
@@ -25,9 +25,9 @@ function iterate_mlmethods() {
         result_template=conf/result.ranking.template
     fi
 
-#    ./log.sh INFO "Preprocessing the data used in the experiments..."
+#    $ML_FRAMEWORK_DIR/log.sh INFO "Preprocessing the data used in the experiments..."
 #    cat $run_dir/mlmethod_per_line.list | cut -f1 -d: | sort | uniq | while read ml_method; do
-#       make -s -f makefile.train_test_eval preprocess CONFIG_FILE=$config_file ML_METHOD=$ml_method  
+#       make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval preprocess CONFIG_FILE=$config_file ML_METHOD=$ml_method  
 #    done
 
     iter=000
@@ -43,14 +43,14 @@ function iterate_mlmethods() {
         #mkdir -p $run_subdir
         #echo_err $run_subdir
 
-        ./log.sh INFO "Running an experiment no. $iter using the ML method $ml_method with params ($ml_params)"
-        ./log.sh DEBUG "Its running directory is: $run_subdir"
+        $ML_FRAMEWORK_DIR/log.sh INFO "Running an experiment no. $iter using the ML method $ml_method with params ($ml_params)"
+        $ML_FRAMEWORK_DIR/log.sh DEBUG "Its running directory is: $run_subdir"
 
         #data_dir=${params[DATA_DIR]-$run_dir/data}
         #DATA_DIR=$data_dir \
 
         run_in_parallel \
-            "./run_experiment.sh \
+            "$ML_FRAMEWORK_DIR/run_experiment.sh \
                 -f $config_file \
                 RUN_DIR=$run_subdir \
                 ML_METHOD_LIST= \
@@ -61,14 +61,14 @@ function iterate_mlmethods() {
     done
 
     # wait until all experiments are acomplished
-    ./log.sh INFO "Waiting for all the experiments to be completed..."
+    $ML_FRAMEWORK_DIR/log.sh INFO "Waiting for all the experiments to be completed..."
     mlmethods_count=`cat $run_dir/mlmethod_per_line.list | wc -l`
     while [ `ls $run_dir/*.mlmethod/done 2> /dev/null | wc -l` -lt $mlmethods_count ]; do
         sleep 5
     done
 
     # collect results
-    ./log.sh INFO "Collecting results of the experiments to: $run_dir/stats"
+    $ML_FRAMEWORK_DIR/log.sh INFO "Collecting results of the experiments to: $run_dir/stats"
     i=0
     for stats_part in $run_dir/*.mlmethod/stats; do
         if [ $i -eq 0 ]; then

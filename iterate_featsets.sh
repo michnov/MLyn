@@ -12,10 +12,10 @@
 function iterate_featsets()
 {
 
-    ./log.sh INFO "Running $0..."
+    $ML_FRAMEWORK_DIR/log.sh INFO "Running $0..."
 
-#source common.sh
-#source params.sh
+#source $ML_FRAMEWORK_DIR/common.sh
+#source $ML_FRAMEWORK_DIR/params.sh
 
 #config_file=${params[RUN_DIR]}/config
 
@@ -24,8 +24,8 @@ function iterate_featsets()
     featset_list=${params[FEATSET_LIST]}
     run_dir=${params[RUN_DIR]}
 
-    ./log.sh DEBUG "Processing the featset list: $featset_list => $run_dir/featset_per_line.list"
-    cat $featset_list | scripts/read_featset_list.pl > $run_dir/featset_per_line.list
+    $ML_FRAMEWORK_DIR/log.sh DEBUG "Processing the featset list: $featset_list => $run_dir/featset_per_line.list"
+    cat $featset_list | $ML_FRAMEWORK_DIR/scripts/read_featset_list.pl > $run_dir/featset_per_line.list
 
     iter=000
     # run an experiment for every feature set
@@ -46,11 +46,11 @@ function iterate_featsets()
         echo -en "\t$feats_sha" >> $feats_info_file
         echo -e "\t`echo $feats | sed 's/,/, /g'`" >> $feats_info_file
         
-        ./log.sh INFO "Running an experiment no. $iter using the featset with sha $feats_sha"
-        ./log.sh DEBUG "Its running directory is: $run_subdir"
+        $ML_FRAMEWORK_DIR/log.sh INFO "Running an experiment no. $iter using the featset with sha $feats_sha"
+        $ML_FRAMEWORK_DIR/log.sh DEBUG "Its running directory is: $run_subdir"
 
         run_in_parallel \
-            "./run_experiment.sh \
+            "$ML_FRAMEWORK_DIR/run_experiment.sh \
                 -f $config_file \
                 FEATSET_LIST= \
                 FEAT_LIST=$feats \
@@ -60,7 +60,7 @@ function iterate_featsets()
     done
 
     # wait until all experiments are acomplished
-    ./log.sh INFO "Waiting for all the experiments to be completed..."
+    $ML_FRAMEWORK_DIR/log.sh INFO "Waiting for all the experiments to be completed..."
     featset_count=`cat $run_dir/featset_per_line.list | wc -l`
     while [ `ls $run_dir/*.featset/done 2> /dev/null | wc -l` -lt $featset_count ]; do
         sleep 10
@@ -68,7 +68,7 @@ function iterate_featsets()
 
     # collect results
     stats=$run_dir/stats
-    ./log.sh INFO "Collecting results of the experiments to: $stats"
+    $ML_FRAMEWORK_DIR/log.sh INFO "Collecting results of the experiments to: $stats"
     for run_subdir in $run_dir/*.featset; do
         cat $run_subdir/info >> $stats
         cat $run_subdir/stats >> $stats
@@ -77,14 +77,14 @@ function iterate_featsets()
 
 function run_on_featset {
     
-    ./log.sh INFO "Filtering features in the data used in the experiments..."
+    $ML_FRAMEWORK_DIR/log.sh INFO "Filtering features in the data used in the experiments..."
 
     # feat_list and data_list should be defined in the config file
     # unless feat_list is defined, the original full data is symlinked
     
     #feat_list=${1-${params[FEAT_LIST]}}
     data_list=${params[DATA_LIST]-"TRAIN_DATA TEST_DATA"}
-    ./log.sh DEBUG "DATA_LIST: $data_list"
+    $ML_FRAMEWORK_DIR/log.sh DEBUG "DATA_LIST: $data_list"
 
     tmp_dir=${params[RUN_DIR]}/data
     data_dir=$tmp_dir/processed
@@ -99,10 +99,10 @@ function run_on_featset {
             
             # preprocess only if the result doesn't exist or is older
             if [ $filt_file -ot $orig_file ]; then
-                ./log.sh INFO "Preprocessing data: $orig_file => $filt_file"
+                $ML_FRAMEWORK_DIR/log.sh INFO "Preprocessing data: $orig_file => $filt_file"
                 iter=`printf "%03d" $i`
                 run_in_parallel \
-                    "./preprocess.sh \
+                    "$ML_FRAMEWORK_DIR/preprocess.sh \
                         -f $config_file \
                         IN_FILE=$orig_file \
                         OUT_FILE=$filt_file; \
@@ -115,9 +115,9 @@ function run_on_featset {
     done
         
     # wait until all experiments are acomplished
-    ./log.sh INFO "Waiting for all jobs to be completed..."
+    $ML_FRAMEWORK_DIR/log.sh INFO "Waiting for all jobs to be completed..."
     while [ `ls $tmp_dir/*.done 2> /dev/null | wc -l` -lt $i ]; do
-        ./log.sh DEBUG `ls $tmp_dir/*.done 2> /dev/null | wc -l` $i
+        $ML_FRAMEWORK_DIR/log.sh DEBUG `ls $tmp_dir/*.done 2> /dev/null | wc -l` $i
         sleep 10
     done
 
@@ -128,7 +128,7 @@ function run_on_featset {
 }
 
 function preprocessed_file_name() {
-    file_stem=`make -s -f makefile.common file_stem_asterisk FILE="$1"`
+    file_stem=`make -s -f $ML_FRAMEWORK_DIR/makefile.common file_stem_asterisk FILE="$1"`
     filt_file=$2/$file_stem.table
     echo "$filt_file"
 }

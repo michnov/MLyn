@@ -1,6 +1,6 @@
 SHELL:=/bin/bash
 
-include makefile.common
+include $(ML_FRAMEWORK_DIR)/makefile.common
 
 #--------------------------------------- HELP --------------------------------------------------------
 
@@ -52,7 +52,7 @@ endif
 
 #-------- directories --------------
 
-SCRIPT_DIR=scripts
+SCRIPT_DIR=$(ML_FRAMEWORK_DIR)/scripts
 
 MODEL_DIR=$(RUN_DIR)/model
 RESULT_DIR=$(RUN_DIR)/result
@@ -154,7 +154,7 @@ endif
 
 eval : $(RESULT_FILE)
 	$(LOG_INFO) "Evaluating the predicted labelling: $<" >&2
-	cat $< | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG)
+	cat $< | $(SCRIPT_DIR)/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG)
 
 #---------------------------------------- CLEAN -------------------------------------------------------
 
