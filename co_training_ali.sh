@@ -60,13 +60,8 @@ function co_training_ali() {
             "semisup_iter.l2.$iter" -30 $run_dir/log 0
 
         # wait until both experiments are acomplished
-        $ML_FRAMEWORK_DIR/log.sh INFO "Waiting for both experiments to be completed..."
-        while [ `ls $run_dir/iter_$iter/done.semisup_iter.* 2> /dev/null | wc -l` -lt 2 ]; do
-            $ML_FRAMEWORK_DIR/log.sh DEBUG `ls $run_dir/iter_$iter/done.semisup_iter.* 2> /dev/null | wc -l` 2
-            sleep 10
-        done
-
-            
+        wait_for_jobs $run_dir/iter_$iter/done.semisup_iter.* 2 10
+        
         if [ -z $delible ]; then
             l1_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l1 TRAIN_DATA=$l1_train_data`
             l2_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l2 TRAIN_DATA=$l2_train_data`

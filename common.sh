@@ -19,6 +19,19 @@ function run_in_parallel()
     fi
 }
 
+function wait_for_jobs()
+{
+    jobs_finished_indicators=$1
+    all_jobs_count=$2
+    timeout=$3
+
+    $ML_FRAMEWORK_DIR/log.sh INFO "Waiting for jobs to be completed..."
+    while [ `ls $jobs_finished_indicators 2> /dev/null | wc -l` -lt $all_jobs_count ]; do
+        $ML_FRAMEWORK_DIR/log.sh DEBUG `ls $jobs_finished_indicators 2> /dev/null | wc -l` $all_jobs_count
+        sleep $timeout
+    done
+}
+
 function echo_err() {
     echo "$@" >&2
 }

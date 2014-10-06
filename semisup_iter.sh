@@ -38,9 +38,5 @@ for file_part in ${params[UNLABELED_DATA]}; do
 done
 
 # wait until all experiments are acomplished
-$ML_FRAMEWORK_DIR/log.sh INFO "Waiting for all the experiments to be completed..."
 unlabeled_count=`ls ${params[UNLABELED_DATA]} | wc -l`
-while [ `ls $run_dir/done.$all_base 2> /dev/null | wc -l` -lt $unlabeled_count ]; do
-    $ML_FRAMEWORK_DIR/log.sh DEBUG `ls $run_dir/done.$all_base 2> /dev/null | wc -l` $unlabeled_count
-    sleep 10
-done
+wait_for_jobs $run_dir/done.$all_base $unlabeled_count 10
