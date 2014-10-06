@@ -1,15 +1,13 @@
 #!/bin/bash
 
 source common.sh
+source params.sh
 
-declare -A params
-load_params params "$@"
 config_file=${params[RUN_DIR]}/config
-save_params params $config_file
 
 ###################################
 
-mlmethod_list=${params[MLMETHOD_LIST]}
+mlmethod_list=${params[ML_METHOD_LIST]}
 run_dir=${params[RUN_DIR]}
 
 result_template=conf/result.template

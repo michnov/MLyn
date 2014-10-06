@@ -1,12 +1,9 @@
 #!/bin/bash
 
 source common.sh
+source params.sh
 
-declare -A params
-load_params params "$@"
-mkdir -p ${params[RUN_DIR]}
 config_file=${params[RUN_DIR]}/config
-save_params params $config_file
 
 ###################################
 
