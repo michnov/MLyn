@@ -24,7 +24,7 @@ VW_APP=/net/cluster/TMP/mnovak/tools/vowpal_wabbit/vowpalwabbit/vw
 
 RUN_DIR=tte.run_dir
 
-TMP_DATA_DIR=$(RUN_DIR)/data
+DATA_DIR=$(RUN_DIR)/data
 MODEL_DIR=$(RUN_DIR)/model
 RESULT_DIR=$(RUN_DIR)/result
 
@@ -39,25 +39,26 @@ MODEL_FILE = $(MODEL_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).mode
 RESULT_FILE = $(RESULT_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).$(TEST_DATA_STEM).res
 
 
-#--------------------------------------- PREPROCESS -----------------------------------------------------------
-
 #------------ create directories -----------
 
-skuska :
-	@echo $(TMP_DATA_DIR)/$(TRAIN_DATA_STEM).table
-	@echo $(TMP_DATA_DIR)/$(TEST_DATA_STEM).table
-
-$(TMP_DATA_DIR) $(MODEL_DIR) $(RESULT_DIR) : | $(RUN_DIR)
+$(DATA_DIR) $(MODEL_DIR) $(RESULT_DIR) : | $(RUN_DIR)
 	mkdir $@
 
 $(RUN_DIR) :
 	mkdir $@
 
+#--------------------------------------- PREPROCESS -----------------------------------------------------------
+
+TRAIN_DATA_READY = $(DATA_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).table
+TEST_DATA_READY = $(DATA_DIR)/$(TEST_DATA_STEM).$(ML_METHOD).table
+
+preprocess : $(TRAIN_DATA_READY) $(TEST_DATA_READY)
+
 #------------- symlink data files ----------
 
-$(TMP_DATA_DIR)/$(TRAIN_DATA_STEM).table : $(TRAIN_DATA) | $(TMP_DATA_DIR)
+$(DATA_DIR)/$(TRAIN_DATA_STEM).table : $(TRAIN_DATA) | $(DATA_DIR)
 	ln -s $< $@
-$(TMP_DATA_DIR)/$(TEST_DATA_STEM).table : $(TEST_DATA) | $(TMP_DATA_DIR)
+$(DATA_DIR)/$(TEST_DATA_STEM).table : $(TEST_DATA) | $(DATA_DIR)
 	ln -s $< $@
 
 #------------- feature filtering -----------------
@@ -66,43 +67,42 @@ ifdef (FEAT_LIST)
 FILT_FEAT_FLAG := --in $(FEAT_LIST)
 endif
 
-$(TMP_DATA_DIR)/%.filter_feats.table : $(TMP_DATA_DIR)/%.table
+$(DATA_DIR)/%.filter_feats.table : $(DATA_DIR)/%.table
 	zcat $< | $(SCRIPT_DIR)/filter_feat.pl $(FILT_FEAT_FLAG) | gzip -c > $@
 
 #------------- ML formatting -----------------
 
-TRAIN_DATA_READY = $(TMP_DATA_DIR)/$(TEST_DATA_STEM).table
-
 #TODO: vw files must be indexed first => separate targets for train and test files
 
-#$(TMP_DATA_DIR)/%.maxent.table : $(TMP_DATA_DIR)/%.filter_feats.table
-#	ln -s $< $@
-#$(TMP_DATA_DIR)/%.sklearn.*.table : $(TMP_DATA_DIR)/%.filter_feats.table
-#	ln -s $< $@
-$(TMP_DATA_DIR)/%.vw.table : $(TMP_DATA_DIR)/%.filter_feats.table
-	zcat $< | scripts/vw_convert.pl | gzip -c > $@
-$(TMP_DATA_DIR)/%.vw.ranking.table : $(TMP_DATA_DIR)/%.filter_feats.table
-	zcat $< | scripts/vw_convert.pl -m | gzip -c > $@
+$(DATA_DIR)/%.$(ML_METHOD).table : $(DATA_DIR)/%.filter_feats.table
+	case $(ML_METHOD) in \
+		vw) zcat $< | scripts/vw_convert.pl | gzip -c > $@ \
+			;; \
+		vw.ranking) zcat $< | scripts/vw_convert.pl -m | gzip -c > $@ \
+			;; \
+		*) ln -s $< $@ \
+			;; \
+	esac
 
 #----------------------------------------- TRAIN --------------------------------------------------------------
 
 train : $(MODEL_FILE)
 
-$(MODEL_DIR)/$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).model     : $(TMP_DATA_DIR)/$(TRAIN_DATA_STEM).filter_feats.table | $(MODEL_DIR)
+$(MODEL_DIR)/$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).model     : $(TRAIN_DATA_READY) | $(MODEL_DIR)
 	zcat $< | $(SCRIPT_DIR)/maxent.train.pl $@
-$(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).model         : $(TMP_DATA_DIR)/$(TRAIN_DATA_STEM).vw.table | $(MODEL_DIR)
+$(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).model         : $(TRAIN_DATA_READY) | $(MODEL_DIR)
 	$(VW_APP) -d $< -f $@ -b 20 --compressed \
 		--oaa `zcat $< | cut -f 1 | sort -n | tail -n1` $(ML_PARAMS) \
 		--holdout_off \
 		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).$$$$.cache
-$(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).model : $(TMP_DATA_DIR)/$(TRAIN_DATA_STEM).vw.ranking.table | $(MODEL_DIR)
+$(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).model : $(TRAIN_DATA_READY) | $(MODEL_DIR)
 	$(VW_APP) -d $< -f $@ -b 20 --compressed \
 		--csoaa_ldf $(ML_PARAMS) \
 		--holdout_off \
 		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).$$$$.cache
-$(MODEL_DIR)/$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).model : $(TMP_DATA_DIR)/$(TRAIN_DATA_STEM).filter_feats.table | $(MODEL_DIR)
+$(MODEL_DIR)/$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).model : $(TRAIN_DATA_READY) | $(MODEL_DIR)
 	zcat $< | $(SCRIPT_DIR)/sklearn.train.py $* "$(ML_PARAMS)" $@
 
 clean_train:
@@ -114,15 +114,15 @@ RESULT_FILE = $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).$(ML_METHOD).$(
 
 test : $(RESULT_FILE)
 
-$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).res     : $(MODEL_FILE) $(TMP_DATA_DIR)/$(TEST_DATA_STEM).filter_feats.table | $(RESULT_DIR)
+$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).res     : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
 	zcat $(word 2,$^) | $(SCRIPT_DIR)/maxent.test.pl $< > $@
-$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).res         : $(MODEL_FILE) $(TMP_DATA_DIR)/$(TEST_DATA_STEM).vw.table | $(RESULT_DIR)
+$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).res         : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
 	zcat $(word 2,$^) | $(VW_APP) -t -i $< -p $@.$$$$ -b 20; \
 	perl -pe '\''$$_ =~ s/^(.*?)\..*? (.*?)$$/$$2\t$$1/;'\'' < $@.$$$$ > $@; \
 	rm $@.$$$$
-$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).res : $(MODEL_FILE) $(TMP_DATA_DIR)/$(TEST_DATA_STEM).vw.ranking.table | $(RESULT_DIR)
+$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).res : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
 	zcat $(word 2,$^) | $(VW_APP) -t -i $< -p $@ -b 20
-$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).res  : $(MODEL_FILE) $(TMP_DATA_DIR)/$(TEST_DATA_STEM).filter_feats.table | $(RESULT_DIR)
+$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).res  : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
 	zcat $(word 2,$^) | $(SCRIPT_DIR)/sklearn.test.py $< > $@
 
 clean_test:
@@ -141,3 +141,35 @@ eval : $(RESULT_FILE)
 #---------------------------------------- CLEAN -------------------------------------------------------
 
 clean : clean_test clean_train
+
+
+#--------------------------------------- HELP --------------------------------------------------------
+
+define HELP_TEXT
+Usage: make [preprocess | train | test | eval | clean]
+	- preprocess: does the feature filtering and transforms the training and testing data 
+		in the tab_space format into a format that can be consumed by the given ML method
+	- train: creates a model from the training data
+		* performs preprocess before 
+	- test: label the testing data using a trained model
+		* performs train before
+	- eval: calculates the score on the testing data
+		* performs test before
+
+	Parameters:
+		TRAIN_DATA : a path to the training data
+		TEST_DATA : a path to the testing data
+		RUN_DIR : a directory where all intermediate files are stored
+		FEAT_LIST : comma-separated list of features to use in a model; all features used if empty (default)
+		ML_METHOD : a ML method to be used (default = maxent)
+		ML_PARAMS : additional ML parameters (default = )
+		DATA_DIR : a directory with the data (default = $$RUN_DIR/data)
+		MODEL_DIR : a directory with the model (default = $$RUN_DIR/model)
+		RESULT_DIR : a directory with the result (default = $$RUN_DIR/result)
+endef
+
+export HELP_TEXT
+help :
+	@echo "$$HELP_TEXT"
+
+all : help
