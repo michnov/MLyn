@@ -10,7 +10,7 @@ use Data::Dumper;
 binmode STDIN, ":utf8";
 binmode STDOUT, ":utf8";
 
-while ( my ($feats, $losses, $tags, $comments) = Treex::Tool::ML::VowpalWabbit::Util::parse_multiline(*STDIN, {split_key_val => 1}) ) {
+while ( my ($feats, $losses, $tags, $comments) = Treex::Tool::ML::VowpalWabbit::Util::parse_multiline(*STDIN, {parse_feats => 'pair'}) ) {
     $comments = Treex::Block::Print::CorefData::comments_from_feats($feats);
     #print STDERR Dumper($instance);
     #print STDERR Dumper($comments);
