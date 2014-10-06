@@ -36,6 +36,7 @@ function self_training() {
     i=0
     iter=`printf "%03d" $i`
     
+    mkdir -p $run_dir/iter_$iter
     echo $iter > $run_dir/iter_$iter/stats
     make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TRAIN_DATA]} > >(tee -a $run_dir/iter_$iter/stats)
     make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TEST_DATA]} > >(tee -a $run_dir/iter_$iter/stats)
@@ -84,8 +85,8 @@ function self_training() {
 
         ./log.sh INFO "Training and testing with the initial model: $init_model"
         echo $iter > $run_dir/iter_$iter/stats
-        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$init_model ML_PARAMS=${params[ML_PARAMS_FOR_UNLABELED]} > >(tee -a $run_dir/iter_$iter/stats)
-        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$init_model ML_PARAMS=${params[ML_PARAMS_FOR_UNLABELED]} > >(tee -a $run_dir/iter_$iter/stats)
+        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="${params[ML_PARAMS_FOR_UNLABELED]}" > >(tee -a $run_dir/iter_$iter/stats)
+        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="${params[ML_PARAMS_FOR_UNLABELED]}" > >(tee -a $run_dir/iter_$iter/stats)
 
         if [ ! -z $delible ]; then
             init_model=`make -s -f makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data`
