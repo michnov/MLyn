@@ -29,15 +29,14 @@ if (keys %in_hash > 0) {
     print $_ while (<STDIN>);
 }
 
-while ( my ($instance, $tag, $comment) = Treex::Tool::ML::VowpalWabbit::Util::parse_singleline(*STDIN, {split_key_val => 1}) ) {
-    if (!@$instance) {
+while ( my ($feats, @rest) = Treex::Tool::ML::VowpalWabbit::Util::parse_singleline(*STDIN, {split_key_val => 1}) ) {
+    if (!defined $feats) {
         print "\n";
         next;
     }
-    my ($feats, $class) = @$instance;
 
     my @filt_feats = grep { $print xor $hash{$_->[0]} } @$feats;
     next if (!@filt_feats);
-    my $str = Treex::Tool::ML::VowpalWabbit::Util::format_singleline(\@filt_feats, $class, $tag, $comment);
+    my $str = Treex::Tool::ML::VowpalWabbit::Util::format_singleline(\@filt_feats, @rest);
     print $str;
 }

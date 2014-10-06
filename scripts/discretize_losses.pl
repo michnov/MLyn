@@ -29,8 +29,7 @@ if ($help) {
     exit;
 }
 
-while ( my ($instance, $tags, $comments) = Treex::Tool::ML::VowpalWabbit::Util::parse_multiline(*STDIN) ) {
-    my ($feats, $losses) = @$instance;
+while ( my ($feats, $losses, $tags, $comments) = Treex::Tool::ML::VowpalWabbit::Util::parse_multiline(*STDIN) ) {
     my @new_losses;
     if (!defined $max_loss) {
         my $min_loss = min @$losses;

@@ -24,12 +24,11 @@ my $loss_limit = $ARGV[0];
 my $all_count = 0;
 my $ok_count = 0;
 
-while ( my ($instance, $tag, $comment) = Treex::Tool::ML::VowpalWabbit::Util::parse_multiline(*STDIN) ) {
-    my ($feats, $losses) = @$instance;
+while ( my ($feats, $losses, $tags, $comments) = Treex::Tool::ML::VowpalWabbit::Util::parse_multiline(*STDIN) ) {
     my $min_loss = min @$losses;
     #print STDERR "$min_loss\n";
     if ($min_loss < $loss_limit) {
-        print Treex::Tool::ML::VowpalWabbit::Util::format_multiline(@$instance, $comment);
+        print Treex::Tool::ML::VowpalWabbit::Util::format_multiline($feats, $losses, $comments);
         $ok_count++;
     }
     $all_count++;
