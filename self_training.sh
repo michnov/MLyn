@@ -15,6 +15,7 @@ function self_training() {
     max_loss=${params[MAX_LOSS]}
     unlabeled_split_size=${params[UNLABELED_SPLIT_SIZE]}
     unlabeled_data=${params[UNLABELED_DATA]}
+    train_data=${params[TRAIN_DATA]}
     
     # check if the unlabeled data is a single file (and should be splitted) or it is multiple files defined by a wildcard
     unlabeled_count=`ls $unlabeled_data | wc -l`
@@ -44,11 +45,11 @@ function self_training() {
         for file_part in $unlabeled_data; do
             file_i_str=`printf "%03d" $file_i`
             
-            result_file=`make -s -f makefile.train_test_eval result_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$old_iter TEST_DATA=$file_part`
+            result_file=`make -s -f makefile.train_test_eval result_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$old_iter TRAIN_DATA=$train_data TEST_DATA=$file_part`
             sys_labeled_data=$run_dir/iter_$iter/data/`basename $file_part`
             
             run_in_parallel \
-                "make -s -f makefile.train_test_eval test CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$old_iter TEST_DATA=$file_part; \
+                "make -s -f makefile.train_test_eval test CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$old_iter TRAIN_DATA=$train_data TEST_DATA=$file_part; \
                     mkdir -p $run_dir/iter_$iter/data; \
                     ./log.sh INFO \"Adding system labels to the unlabeled data, if the minimum loss is <= $max_loss: $file_part + $result_file => $sys_labeled_data\"; \
                     scripts/paste_data_results.sh $file_part $result_file | scripts/filter_by_loss.pl $max_loss | scripts/discretize_losses.pl | gzip -c > $sys_labeled_data; \
@@ -67,11 +68,12 @@ function self_training() {
         done
 
         ./log.sh INFO "Merging all training data..."
-        echo $train_data_ready >> $run_dir/iter_$iter/data.to_merge.list
-        cat $run_dir/iter_$iter/data.to_merge.list | xargs zcat | gzip -c > $run_dir/iter_$iter/data/all.data
+        echo ${params[TRAIN_DATA]} >> $run_dir/iter_$iter/data.to_merge.list
+        train_data=$run_dir/iter_$iter/data/all.data
+        cat $run_dir/iter_$iter/data.to_merge.list | xargs zcat | gzip -c > $train_data
 
-        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$run_dir/iter_$iter/data/all.data TEST_DATA=${params[TRAIN_DATA]} > >(tee $run_dir/stats)
-        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$run_dir/iter_$iter/data/all.data TEST_DATA=${params[TEST_DATA]} > >(tee -a $run_dir/stats)
+        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} > >(tee $run_dir/stats)
+        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} > >(tee -a $run_dir/stats)
     done
 }
 
