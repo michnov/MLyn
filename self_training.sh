@@ -36,6 +36,7 @@ function self_training() {
     iter=`printf "%03d" $i`
     make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TRAIN_DATA]} > >(tee $run_dir/stats)
     make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TEST_DATA]} > >(tee -a $run_dir/stats)
+    label_model_path=`make -s -f makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter`
     #train_data_ready=`make -s -f makefile.preprocess data_ready_path CONFIG_FILE=$config_file DATA_DIR=$run_dir/data DATA=${params[TRAIN_DATA]}`
     for (( i=1; i<=$iter_count; i++ )); do
         old_iter=$iter
@@ -67,13 +68,14 @@ function self_training() {
             sleep 10
         done
 
-        ./log.sh INFO "Merging all training data..."
-        echo ${params[TRAIN_DATA]} >> $run_dir/iter_$iter/data.to_merge.list
+        ./log.sh INFO "Merging all newly labeled data..."
+        #echo ${params[TRAIN_DATA]} >> $run_dir/iter_$iter/data.to_merge.list
         train_data=$run_dir/iter_$iter/data/all.data
         cat $run_dir/iter_$iter/data.to_merge.list | xargs zcat | gzip -c > $train_data
 
-        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} > >(tee $run_dir/stats)
-        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} > >(tee -a $run_dir/stats)
+        ./log.sh INFO "Training and testing with the initial model: $label_model_path"
+        make -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$label_model_path > >(tee $run_dir/stats)
+        make -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$label_model_path > >(tee -a $run_dir/stats)
     done
 }
 

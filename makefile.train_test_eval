@@ -23,6 +23,7 @@ Usage: make [train | test | eval | clean]
 		ML_PARAMS : additional ML parameters (default = )
 		MODEL_DIR : a directory with the model (default = $$RUN_DIR/model)
 		RESULT_DIR : a directory with the result (default = $$RUN_DIR/result)
+		INITIAL_MODEL : a model to start with and build upon; works only for VW models
 endef
 
 export HELP_TEXT
@@ -46,6 +47,10 @@ ML_PARAMS_HASH = $(shell echo "$(ML_PARAMS)" | shasum | cut -c 1-5)
 
 #VW_APP=/net/work/people/mnovak/tools/x86_64/vowpal_wabbit/vowpalwabbit/vw
 VW_APP=/net/cluster/TMP/mnovak/tools/vowpal_wabbit/vowpalwabbit/vw
+
+ifdef INITIAL_MODEL
+INITIAL_MODEL_FLAGS=-i $(INITIAL_MODEL)
+endif
 
 #-------- directories --------------
 
@@ -92,14 +97,14 @@ $(MODEL_DIR)/$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).model     : $(TRAIN_DAT
 	zcat $< | $(SCRIPT_DIR)/maxent.train.pl $@
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).model         : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a VW-oaa model: $< => $@" >&2
-	zcat $< | cut -f2 --complement | $(VW_APP) -f $@ -b 20 \
+	zcat $< | cut -f2 --complement | $(VW_APP) -f $@ $(INITIAL_MODEL_FLAGS) -b 20 \
 		--oaa `zcat $< | cut -f 1 | sort -n | tail -n1` $(ML_PARAMS) \
 		--holdout_off \
 		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).$$$$.cache
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).model : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a VW-csoaa_ldf (ranking) model: $< => $@" >&2
-	zcat $< | cut -f2 --complement | $(VW_APP) -f $@ -b 20 \
+	zcat $< | cut -f2 --complement | $(VW_APP) -f $@ $(INITIAL_MODEL_FLAGS) -b 20 \
 		--csoaa_ldf $(ML_PARAMS) \
 		--holdout_off \
 		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).$$$$.cache; \
@@ -107,6 +112,9 @@ $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).model : $(TRAIN_DAT
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).model : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a ScikitLearn ($*) model: $< => $@" >&2
 	zcat $< | $(SCRIPT_DIR)/sklearn.train.py $* "$(ML_PARAMS)" $@
+
+model_path:
+	echo $(MODEL_FILE)
 
 clean_train:
 	-rm $(MODEL_FILE)
