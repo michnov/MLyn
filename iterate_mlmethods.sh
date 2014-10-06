@@ -78,4 +78,5 @@ function iterate_mlmethods() {
         cp $run_dir/stats.tmp $run_dir/stats
         rm $run_dir/stats.tmp
     done
+    sed -i 's/|$//' $run_dir/stats
 }

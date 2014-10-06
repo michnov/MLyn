@@ -32,27 +32,36 @@ sub info {
 
 sub ml_method {
     my ($rest, $colspans) = @_;
-    print STDERR Dumper($rest, $colspans);
-    my @spans_str = @$colspans ? map {"colspan=\"$colspans->[$_]\""} 0 .. $#$colspans
-                               : map {""} @$rest;
-    my @ths = map {"<th $spans_str[$_] style=\"font-size:70%\">$rest->[$_]</th>"} 0 .. $#$rest;
+    my @ths = ();
+    for (my $i = 0; $i < @$rest; $i++) {
+        my $item = $rest->[$i];
+        (my $border_style, $item) = _border_style($item);
+        my $colspan_str = @$colspans ? "colspan=\"$colspans->[$i]\"" : "";
+        my $th_str = "<th $colspan_str style=\"font-size:70%; $border_style\">$item</th>";
+        push @ths, $th_str;
+    }
     return "<tr>" . (join "\t", @ths) . "</tr>";
 }
 
 sub iter {
     my (@rest) = @_;
-    return "<tr>" . (join "\t", map {"<th style=\"font-size:60%\">$_</th>"} @rest) . "</tr>";
+    my @ths = map {
+        my $item = $_;
+        (my $border_style, $item) = _border_style($item);
+        "<th style=\"font-size:60%; $border_style\">$_</th>"
+    } @rest;
+    return "<tr>" . (join "\t", @ths) . "</tr>";
 }
 
-use Data::Dumper;
 
 sub results {
     my ($rest, $tr_style) = @_;
     $tr_style = "" if (!defined $tr_style);
-    my @res = map { my @chunks = split / /, $_; \@chunks } @$rest;
-    my $max_perc = max( map {$_->[0] || 0} @res);
+    my $max_perc = max( map {my @a = split / /, $_; $a[0] || 0} @$rest);
     my @tds = map {
-        my ($perc, $ratio) = @$_;
+        my $item = $_;
+        (my $border_style, $item) = _border_style($item);
+        my ($perc, $ratio) = split / /, $item;
         if (!defined $perc) {
             $perc = 0;
             $ratio = "()";
@@ -64,9 +73,16 @@ sub results {
         if ($perc == $max_perc) {
             $color = "color: red;";
         }
-        "<td style=\"padding-right:7px; text-align:right; $color\"><a title=\"$ratio\">$perc</a></td>"
-    } @res;
+        "<td style=\"padding-right:7px; text-align:right; $color $border_style\"><a title=\"$ratio\">$perc</a></td>"
+    } @$rest;
     return "<tr $tr_style>" . (join "\t", @tds) . "</tr>";
+}
+
+sub _border_style {
+    my ($str) = @_;
+    my $style = ($str =~ /\|$/) ? "border-right:1px solid;" : "";
+    $str =~ s/\|$//;
+    return ($style, $str);
 }
 
 sub _count_rowspan {
@@ -85,17 +101,13 @@ sub _count_colspans {
     my @colspans = ();
     my $next_label = $lines->[$i+1][0];
     return () if ($next_label eq "TRAIN:");
-    
+
     my $l = 0;
-    foreach my $item (@{$lines->[$i+1]}) {
-        if ($item eq $next_label) {
-            if ($l) {
-                push @colspans, $l; 
-            }
+    for (my $j = 1; $j < @{$lines->[$i+1]}; $j++) {
+        $l++;
+        if ($lines->[$i+1][$j] =~ /\|$/) {
+            push @colspans, $l;
             $l = 0;
-        }
-        else {
-            $l++;
         }
     }
     push @colspans, $l;
@@ -109,6 +121,7 @@ my @table_lines = map {chomp $_; [split /\t/, $_]} @lines;
 
 
 my $rowspan = 1;
+my $multicols_count = 0;
 my $label;
 for (my $i = 0; $i < @table_lines; $i++) {
 

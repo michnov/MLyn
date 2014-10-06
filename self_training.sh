@@ -108,5 +108,6 @@ function self_training() {
     
     echo -e "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
     paste $run_dir/stats.header $run_dir/iter_*/stats >> $run_dir/stats
+    sed -i 's/$/|/' $run_dir/stats
     rm $run_dir/stats.header
 }
