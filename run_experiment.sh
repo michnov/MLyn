@@ -12,6 +12,7 @@ source $ML_FRAMEWORK_DIR/iterate_mlmethods.sh
 
 source $ML_FRAMEWORK_DIR/train_test.sh
 source $ML_FRAMEWORK_DIR/self_training.sh
+source $ML_FRAMEWORK_DIR/co_training_ali.sh
 
 
 ###### ITERATE OVER FEATSETS #######
@@ -33,7 +34,7 @@ else
             train_test) train_test ;;
             cross-valid) ;;
             self-training) self_training ;;
-            co-training_align) ;;
+            co-training_align) co_training_ali ;;
             *)  $ML_FRAMEWORK_DIR/log.sh ERROR "Cannot recognize the type of an experiment: $exper_type" >&2;
                 exit
                 ;;
