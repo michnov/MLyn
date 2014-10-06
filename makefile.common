@@ -7,21 +7,13 @@ LOG_INFO=$(LOGGER) INFO
 
 #---------------------------------
 
-src_stem = $(if $(filter %.table, $1),$(basename $(notdir $1)),$(notdir $1))
-orig_stem = $(if $(filter %.orig.table, $1),$(patsubst %.orig.table,%,$(notdir $1)),$(src_stem))
-feat_stem = $(if $(filter %.filter_feats.table, $1),$(patsubst %.filter_feats.table,%,$(notdir $1)),$(orig_stem))
-ml_method_stem = $(if $(filter %.$(ML_METHOD).table, $1),$(patsubst %.$(ML_METHOD).table,%,$(notdir $1)),$(feat_stem))
+data_stem = $(if $(filter %.table, $1),$(basename $(notdir $1)),$(notdir $1))
 
 #------------ create directories -----------
 
 RUN_DIR=tte.run_dir
 
-DATA_DIR=$(RUN_DIR)/data
-
 include makefile.config
-
-$(DATA_DIR) : | $(RUN_DIR)
-	mkdir $@
 
 $(RUN_DIR) :
 	mkdir $@

@@ -2,53 +2,54 @@ SHELL:=/bin/bash
 
 include makefile.common
 
-DATA_STEM := $(call ml_method_stem, $(DATA))
+#--------------------------------------- HELP --------------------------------------------------------
 
-DATA_ORIG = $(DATA_DIR)/$(DATA_STEM).orig.table
-DATA_FEAT = $(DATA_DIR)/$(DATA_STEM).filter_feats.table
-DATA_READY = $(DATA_DIR)/$(DATA_STEM).$(ML_METHOD).table
+define HELP_TEXT
+Usage: make [preprocess]
+	- preprocess: does the feature filtering (and possible other actions) 
 
-.SECONDARY : $(DATA_ORIG) $(DATA_FEAT) $(DATA_READY)
+	Parameters:
+		CONFIG_FILE : all parameters can be defined also in a config file;
+			the value set as a command argument overrides the value set in the config file
+		DATA : a path to the data
+		FEAT_LIST : comma-separated list of features to use in a model; all features used if empty (default)
+		RUN_DIR : a directory where all intermediate files are stored
+		DATA_DIR : a directory with the data (default = $$RUN_DIR/data)
+endef
 
-#echo :
-#	echo $(DATA_ORIG)
-#	echo $(DATA_FEAT)
-#	echo $(DATA_READY)
+export HELP_TEXT
+help :
+	@echo "$$HELP_TEXT"
+
+
+#--------------------------------------- DIRS --------------------------------------------------------
+
+DATA_DIR=$(RUN_DIR)/data
+
+$(DATA_DIR) : | $(RUN_DIR)
+	mkdir $@
+
+#--------------------------------------- MAIN --------------------------------------------------------
+
+DATA_STEM := $(call data_stem, $(DATA))
+
+DATA_READY = $(DATA_DIR)/$(DATA_STEM).table
+
+.SECONDARY : $(DATA_READY)
 
 preprocess : $(DATA_READY)
 
-data_orig_path :
-	echo $(DATA_ORIG)
 data_ready_path :
 	echo $(DATA_READY)
 
-#$(DATA_ORIG) : | $(DATA_DIR)
-$(DATA_DIR)/%.orig.table : | $(DATA_DIR)
-	$(LOG_INFO) "Symlinking a data file: $@ -> $(abspath $(DATA))" >&2
-	ln -s $(abspath $(DATA)) $@
-
 #------------- feature filtering -----------------
 
-#$(DATA_FEAT) : $(DATA_ORIG)
-$(DATA_DIR)/%.filter_feats.table : $(DATA_DIR)/%.orig.table
-	$(LOG_INFO) "Feature filtering: $< => $@" >&2
+$(DATA_READY) : $(DATA) | $(DATA_DIR)
 	if [ _$(FEAT_LIST) != _ ]; then \
-		filt_feat_flag="--in $(FEAT_LIST)"; \
-	fi; \
-	zcat $< | scripts/filter_feat.pl $$filt_feat_flag | gzip -c > $@
-
-#------------- ML formatting -----------------
-
+		$(LOG_INFO) "Feature filtering: $< => $@" >&2; \
+		zcat $< | scripts/filter_feat.pl --in $(FEAT_LIST) | gzip -c > $@; \
+	else \
+		$(LOG_INFO) "Symlinking a data file: $@ -> $(abspath $<)" >&2; \
+		ln -s $(abspath $<) $@; \
+	fi
 #TODO: vw files must be indexed first => separate targets for train and test files
-
-#$(DATA_READY) : $(DATA_FEAT)
-$(DATA_DIR)/%.$(ML_METHOD).table : $(DATA_DIR)/%.filter_feats.table
-	$(LOG_INFO) "Converting to the format expected by a ML method: $< => $@" >&2
-	case $(ML_METHOD) in \
-		vw) zcat $< | scripts/vw_convert.pl | gzip -c > $@ \
-			;; \
-		vw.ranking) zcat $< | scripts/vw_convert.pl -m | gzip -c > $@ \
-			;; \
-		*) ln -s $< $@ \
-			;; \
-	esac
