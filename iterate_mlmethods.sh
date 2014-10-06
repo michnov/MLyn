@@ -77,6 +77,7 @@ function iterate_mlmethods() {
         cat $stats_part | cut -f1 --complement | paste $run_dir/stats - > $run_dir/stats.tmp
         cp $run_dir/stats.tmp $run_dir/stats
         rm $run_dir/stats.tmp
+        ((i++))
     done
     sed -i 's/|$//' $run_dir/stats
 }
