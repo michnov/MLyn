@@ -6,11 +6,12 @@ use strict;
 use List::Util qw/max/;
 use Data::Dumper;
 
-sub date {
+sub info {
     my (@rest) = @_;
     my $str = "<h1>" . shift @rest;
+    $str .= "<span style=\"font-size:50%; color:Blue; position:relative; left:10px\">". (shift @rest) ."</span>";
     if (@rest) {
-        $str .= "<span style=\"font-size:50%; color:DarkGreen; left:-20px\">". (join "\t", @rest) ."</span>";
+        $str .= "<span style=\"font-size:50%; color:DarkGreen; position:relative; left:20px\">". (join "\t", @rest) ."</span>";
     }
     $str .= "</h1>";
     return $str;
@@ -23,11 +24,6 @@ sub feats {
     } elsif (@rest == 3) {
         return "<h3><a title=\"". ($rest[2] // "") . "\">" . $rest[0] . "</a><span style=\"font-size:80%; left:-20px\">$rest[1]</span></h3>";
     }
-}
-
-sub info {
-    my (@rest) = @_;
-    return "<p>" . (join "\t", @rest) . "</p>";
 }
 
 sub ml_method {
@@ -134,14 +130,11 @@ for (my $i = 0; $i < @table_lines; $i++) {
         $rowspan--;
     }
 
-    if ($label eq "DATE:") {
-        $html_str .= date(@rest);
+    if ($label eq "INFO:") {
+        $html_str .= info(@rest);
     }
     elsif ($label eq "FEATS:") {
         $html_str .= feats(@rest);
-    }
-    elsif ($label eq "INFO:") {
-        $html_str .= info(@rest);
     }
     elsif ($label eq "ML_METHOD:") {
         $html_str .= "<table style=\"border-collapse: collapse;\">\n";
