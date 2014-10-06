@@ -76,6 +76,7 @@ skuska :
 	@echo $(TEST_DATA)
 	@echo $(TRAIN_DATA)
 	@echo $(FEAT_LIST)
+	@echo $(abspath $(TRAIN_DATA))
 
 #----------- files ---------------
 
@@ -109,7 +110,7 @@ preprocess : $(TRAIN_DATA_READY) $(TEST_DATA_READY)
 
 
 $(DATA_DIR)/%.orig.table : | $(DATA_DIR)
-	ln -s $(_DATA) $@
+	ln -s $(abspath $(_DATA)) $@
 
 #------------- feature filtering -----------------
 
