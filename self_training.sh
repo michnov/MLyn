@@ -70,8 +70,8 @@ function self_training() {
 
         ./log.sh INFO "Merging all newly labeled data..."
         #echo ${params[TRAIN_DATA]} >> $run_dir/iter_$iter/data.to_merge.list
-        train_data=$run_dir/iter_$iter/data/all.data
-        cat $run_dir/iter_$iter/data.to_merge.list | xargs zcat | gzip -c > $train_data
+        train_data=$run_dir/iter_$iter/data/`basename $unlabeled_data`
+        #cat $run_dir/iter_$iter/data.to_merge.list | xargs zcat | gzip -c > $train_data
 
         ./log.sh INFO "Training and testing with the initial model: $label_model_path"
         make -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$label_model_path > >(tee $run_dir/stats)
