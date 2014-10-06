@@ -12,7 +12,7 @@ exper_type=${params[EXPERIMENT_TYPE]}
 case $exper_type in
     train_test) ./train_test.sh -f $config_file ;;
     cross-valid) ;;
-    self-training) ;;
+    self-training) ./self_training.sh -f $config_file ;;
     co-training_align) ;;
     *)  ./log.sh ERROR "Cannot recognize the type of an experiment: $exper_type" >&2;
         exit
