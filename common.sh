@@ -11,7 +11,6 @@ function load_params()
 {
     config_var=$1
     shift
-    echo "$@"
 
     local OPTIND
     while getopts ":f:" opt; do
@@ -23,8 +22,8 @@ function load_params()
         esac
     done
 
-    sed_cmd='s/^\([^=]*\)=\(.*\)$/'$config_var'[\1]=\2;/'
-    config_script=`cat $config_file | sed $sed_cmd`
+    sed_cmd='s/^\([^=]*\)=\(.*\)$/'$config_var'[\1]="\2";/'
+    config_script=`cat $config_file | grep -v "^#" | sed $sed_cmd`
     shift $(($OPTIND - 1))
     
     config_script+=`echo "$@" | sed 's/ /\n/g' | sed $sed_cmd`
@@ -35,6 +34,9 @@ function save_params()
 {
     config_var=$1
     output_file=$2
+    if [ -f $output_file ]; then
+        rm $output_file;
+    fi
     all_keys=`eval 'echo ${!'$config_var'[@]}'`
     for key in $all_keys; do
         value=`eval 'echo ${'$config_var'['$key']}'`
