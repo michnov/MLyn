@@ -39,6 +39,9 @@ DATA_READY = $(DATA_DIR)/$(DATA_STEM).table
 
 preprocess : $(DATA_READY)
 
+data_stem :
+	echo $(DATA_STEM)
+
 data_ready_path :
 	echo $(DATA_READY)
 
