@@ -7,6 +7,9 @@ use Treex::Tool::ML::VowpalWabbit::Util;
 use Getopt::Long;
 use Data::Dumper;
 
+binmode STDIN, ":utf8";
+binmode STDOUT, ":utf8";
+
 my $in = '';
 my $out = '';
 

@@ -3,7 +3,7 @@
 use warnings;
 use strict;
 
-binmode STDIN, "utf8";
+binmode STDIN, ":utf8";
 
 my $usage = "$0 <part_size> <prefix>";
 
