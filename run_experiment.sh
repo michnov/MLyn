@@ -4,6 +4,7 @@ source common.sh
 
 declare -A params
 load_params params "$@"
+mkdir -p ${params[RUN_DIR]}
 config_file=${params[RUN_DIR]}/config
 save_params params $config_file
 
@@ -12,7 +13,7 @@ save_params params $config_file
 exper_type=${params[EXPERIMENT_TYPE]}
 
 case $exper_type in
-    train_test) train_test.sh -f $config_file ;;
+    train_test) ./train_test.sh -f $config_file ;;
     cross-valid) ;;
     self-training) ;;
     co-training_align) ;;
