@@ -63,7 +63,7 @@ RESULT_DIR=$(RUN_DIR)/result
 # this must be placed after all definitions of public variables
 
 ifdef CONFIG_FILE
-CONFIG_CMD:=$(shell cat $(CONFIG_FILE) | sed 's/ /__SPACE__/g')
+CONFIG_CMD:=$(shell cat $(CONFIG_FILE) | grep -v '^\#' | sed 's/ /__SPACE__/g')
 $(foreach ONE_CMD,$(CONFIG_CMD),$(eval $(subst __SPACE__, ,$(ONE_CMD))))
 endif
 
