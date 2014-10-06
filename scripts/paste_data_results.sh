@@ -6,8 +6,8 @@ mkdir $tmp_dir
 gzipped_data=$1
 results=$2
 
-zcat $gzipped_data | cut -f1 --complement > $tmp_dir/data
-cat $results | perl -e 'my $p = 1; while (<>) { chomp $_; if ($p) {print "__SHARED__\n$_\n"; $p = 0;} else {print  "$_\n";} if ($_ =~ /^\s*$/) {$p = 1;} }' > $tmp_dir/results
-paste $tmp_dir/results $tmp_dir/data
+zcat $gzipped_data > $tmp_dir/data
+cat $results | cut -f1 -d' ' | perl -e '$ni = 1; while (<STDIN>) { chomp $_; if ($ni) { print "\n"; } if ($_ =~ /^$/) {$ni = 1;} else {$ni = 0;}; print "$_\n"; }' > $tmp_dir/results
+zcat $gzipped_data | paste $tmp_dir/results - | perl -ne 'chomp $_; my ($res, $x) = split /\t/, $_; if ($res =~ /^$/) {print "$x\n";} else { ($first, $second, @parts) = split /:/, $x; print join ":", ($first.":".$res.$second, @parts); print "\n";}'
 
 rm -rf $tmp_dir
