@@ -54,5 +54,9 @@ $(DATA_READY) : $(DATA) | $(DATA_DIR)
 	else \
 		$(LOG_INFO) "Symlinking a data file: $@ -> $(abspath $<)" >&2; \
 		ln -s $(abspath $<) $@; \
+		if ! cat $@ > /dev/null 2>&1; then \
+			$(LOG_WARN) "Too many symlinks for $(abspath $<). Copying instead: $(abspath $<) => $@" >&2; \
+			cp $(abspath $<) $@; \
+		fi; \
 	fi
 #TODO: vw files must be indexed first => separate targets for train and test files
