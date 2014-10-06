@@ -1,35 +1,31 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
-use strict;
 use warnings;
+use strict;
+
+use Treex::Tool::ML::TabSpace::Util;
+use List::Util qw/min/;
+
+binmode STDIN, ":utf8";
+binmode STDOUT, ":utf8";
+
+my $USAGE = <<USAGE;
+Usage: $0 <upper_loss_limit>
+    - filters out instances with a minimum loss greater than upper_loss_limit
+    - works for multiline instances so far
+USAGE
 
 if (@ARGV < 1) {
-    print "Usage: $0 <upper_score_limit>\n";
+    print $USAGE;
+    exit;
 }
+my $loss_limit = $ARGV[0];
 
-my $score_limit = $ARGV[0];
-
-my @instances = ();
-my $max_score = undef;
-while (<STDIN>) {
-    chomp $_;
-    if ($_ =~ /^\s*$/) {
-        if (defined $max_score && ($max_score < $score_limit)) {
-            print join "\n", @instances;
-            print "\n\n";
-        }
-        @instances = ();
-        $max_score = undef;
-        next;
+while ( my $instance = Treex::Tool::ML::TabSpace::Util::parse_multiline(*STDIN) ) {
+    my ($feats, $losses) = @$instance;
+    my $min_loss = min @$losses;
+    #print STDERR "$min_loss\n";
+    if ($min_loss < $loss_limit) {
+        print Treex::Tool::ML::TabSpace::Util::format_multiline(@$instance);
     }
-    push @instances, $_;
-    my ($score, @rest) = split /\t/, $_;
-#    print STDERR "$score\n";
-    if ($score ne '__SHARED__' && (!defined $max_score || $score < $max_score)) {
-        $max_score = $score;
-    }
-}
-if (defined $max_score && ($max_score < $score_limit)) {
-    print join "\n", @instances;
-    print "\n\n";
 }
