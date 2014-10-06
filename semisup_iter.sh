@@ -39,4 +39,4 @@ done
 
 # wait until all experiments are acomplished
 unlabeled_count=`ls ${params[UNLABELED_DATA]} | wc -l`
-wait_for_jobs $run_dir/done.$all_base $unlabeled_count
+wait_for_jobs "$run_dir/done.$all_base" $unlabeled_count

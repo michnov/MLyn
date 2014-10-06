@@ -57,7 +57,7 @@ function co_training_ali() {
                 RUN_DIR=$l2_iter_run_dir;
                 touch $run_dir/iter_$iter/done.semisup_iter.l2" \
             "semisup_iter.l2.$iter" -30 $run_dir/log 0
-        wait_for_jobs $run_dir/iter_$iter/done.semisup_iter.* 2
+        wait_for_jobs "$run_dir/iter_$iter/done.semisup_iter.*" 2
 
         l1_base=`basename "$l1_unlabeled_data"`
         l2_base=`basename "$l2_unlabeled_data"`
