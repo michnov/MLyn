@@ -14,7 +14,7 @@ run_dir=${params[RUN_DIR]}
 
 result_template=conf/result.template
 
-./log.sh DEBUG "Filtering ML method list: $mlmethod_list => $run_dir/mlmethod_per_line.list"
+./log.sh DEBUG "Filtering the ML method list: $mlmethod_list => $run_dir/mlmethod_per_line.list"
 cat $mlmethod_list | grep -v "^#" > $run_dir/mlmethod_per_line.list
 if [ ${params[RANKING]}. == 1. ]; then
     cat $run_dir/mlmethod_per_line.list | grep "ranking" > $run_dir/mlmethod_per_line.list.tmp
