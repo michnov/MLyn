@@ -6,63 +6,93 @@
 # OUTPUT:
 #   RUN_DIR/stats
 
-./log.sh INFO "Running $0..."
 
-source common.sh
-source params.sh
+# the associative array "params" is global
+# the "config_file" constant is global
+function iterate_featsets()
+{
 
-config_file=${params[RUN_DIR]}/config
+    ./log.sh INFO "Running $0..."
 
-###################################
+#source common.sh
+#source params.sh
 
-featset_list=${params[FEATSET_LIST]}
-run_dir=${params[RUN_DIR]}
+#config_file=${params[RUN_DIR]}/config
 
-./log.sh DEBUG "Processing the featset list: $featset_list => $run_dir/featset_per_line.list"
-cat $featset_list | scripts/read_featset_list.pl > $run_dir/featset_per_line.list
+    ###################################
 
-iter=000
-# run an experiment for every feature set
-cat $run_dir/featset_per_line.list | while read featset; do
-    iter=`perl -e 'my $x = shift @ARGV; $x++; printf "%03s", $x;' $iter`
+    featset_list=${params[FEATSET_LIST]}
+    run_dir=${params[RUN_DIR]}
+
+    ./log.sh DEBUG "Processing the featset list: $featset_list => $run_dir/featset_per_line.list"
+    cat $featset_list | scripts/read_featset_list.pl > $run_dir/featset_per_line.list
+
+    iter=000
+    # run an experiment for every feature set
+    cat $run_dir/featset_per_line.list | while read featset; do
+        iter=`perl -e 'my $x = shift @ARGV; $x++; printf "%03s", $x;' $iter`
+        
+        feats=`echo "$featset" | cut -d"#" -f1`
+        feats_descr=`echo "$featset" | sed 's/^[^#]*#//' | sed 's/__WS__/ /g'`
+        feats_sha=`echo "$feats" | shasum | cut -c 1-10`
+
+        run_subdir=$run_dir/$iter.$feats_sha.featset
+        mkdir -p $run_subdir
+
+        # print out an info file
+        feats_info_file=$run_subdir/info
+        echo -en "FEATS:" >> $feats_info_file
+        echo -en "\t$feats_descr" >> $feats_info_file
+        echo -en "\t$feats_sha" >> $feats_info_file
+        echo -e "\t`echo $feats | sed 's/,/, /g'`" >> $feats_info_file
+        
+        ./log.sh INFO "Running an experiment no. $iter using the featset with sha $feats_sha"
+        ./log.sh DEBUG "Its running directory is: $run_subdir"
+
+        run_in_parallel \
+            "./run_experiment.sh \
+                -f $config_file \
+                FEATSET_LIST= \
+                FEAT_LIST=$feats \
+                RUN_DIR=$run_subdir; \
+             touch $run_subdir/done;" \
+            "featset_exper.$feats_sha" -50 $run_subdir/log 30
+    done
+
+    # wait until all experiments are acomplished
+    ./log.sh INFO "Waiting for all the experiments to be completed..."
+    featset_count=`cat $run_dir/featset_per_line.list | wc -l`
+    while [ `ls $run_dir/*.featset/done 2> /dev/null | wc -l` -lt $featset_count ]; do
+        sleep 10
+    done
+
+    # collect results
+    stats=$run_dir/stats
+    ./log.sh INFO "Collecting results of the experiments to: $stats"
+    for run_subdir in $run_dir/*.featset; do
+        cat $run_subdir/info >> $stats
+        cat $run_subdir/stats >> $stats
+    done
+}
+
+function run_on_featset {
     
-    feats=`echo "$featset" | cut -d"#" -f1`
-    feats_descr=`echo "$featset" | sed 's/^[^#]*#//' | sed 's/__WS__/ /g'`
-    feats_sha=`echo "$feats" | shasum | cut -c 1-10`
+    ./log.sh INFO "Filtering features in the data used in the experiments..."
 
-    run_subdir=$run_dir/$iter.$feats_sha.featset
-    mkdir -p $run_subdir
-
-    # print out an info file
-    feats_info_file=$run_subdir/info
-    echo -en "FEATS:" >> $feats_info_file
-    echo -en "\t$feats_descr" >> $feats_info_file
-    echo -en "\t$feats_sha" >> $feats_info_file
-    echo -e "\t`echo $feats | sed 's/,/, /g'`" >> $feats_info_file
+    # feat_list and data_list should be defined in the config file
+    # unless feat_list is defined, the original full data is symlinked
     
-    ./log.sh INFO "Running an experiment no. $iter using the featset with sha $feats_sha"
-    ./log.sh DEBUG "Its running directory is: $run_subdir"
+    #feat_list=${1-${params[FEAT_LIST]}}
+    data_list=${params[DATA_LIST]-"TRAIN_DATA TEST_DATA"}
 
-    run_in_parallel \
-        "./iterate_mlmethods.sh \
-            -f $config_file \
-            FEAT_LIST=$feats \
-            RUN_DIR=$run_subdir; \
-         touch $run_subdir/done;" \
-        "featset_exper.$feats_sha" -50 $run_subdir/log 30
-done
+    for data_name in $data_list; do
+        make -s -f makefile.preprocess preprocess CONFIG_FILE=$config_file DATA=${params[$data_name]}
+        train_ready=`make -s -f makefile.preprocess data_ready_path CONFIG_FILE=$config_file DATA=${params[$data_name]}`
+        params[$data_name]=$train_ready 
+    done
 
-# wait until all experiments are acomplished
-./log.sh INFO "Waiting for all the experiments to be completed..."
-featset_count=`cat $run_dir/featset_per_line.list | wc -l`
-while [ `ls $run_dir/*.featset/done 2> /dev/null | wc -l` -lt $featset_count ]; do
-    sleep 10
-done
+    unset params[FEAT_LIST]
+    unset params[DATA_LIST]
 
-# collect results
-stats=$run_dir/stats
-./log.sh INFO "Collecting results of the experiments to: $stats"
-for run_subdir in $run_dir/*.featset; do
-    cat $run_subdir/info >> $stats
-    cat $run_subdir/stats >> $stats
-done
+    save_params params $config_file
+}

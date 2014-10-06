@@ -40,7 +40,7 @@ function load_params()
     all_keys=`eval 'echo ${!'$config_var'[@]}'`
     for key in $all_keys; do
         value=`eval 'echo ${'$config_var'['$key']}'`
-        if [ $value'_' == '_' ]; then
+        if [ -z "$value" ]; then
             eval 'unset '$config_var'['$key']'
         fi
     done
