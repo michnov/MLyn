@@ -19,6 +19,8 @@ Usage: make [preprocess | train | test | eval | clean]
 		* performs test before
 
 	Parameters:
+		CONFIG_FILE : all parameters can be defined also in a config file;
+			the value set as a command argument overrides the value set in the config file
 		TRAIN_DATA : a path to the training data
 		TEST_DATA : a path to the testing data
 		RUN_DIR : a directory where all intermediate files are stored
