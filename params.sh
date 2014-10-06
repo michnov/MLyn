@@ -22,6 +22,8 @@ function load_params()
         esac
     done
 
+    ./log.sh DEBUG "Loading parameters..."
+
     sed_cmd='s/^\([^=]*\)=\(.*\)$/'$config_var'[\1]="\2";/'
     config_script=`cat $config_file | grep -v "^#" | sed $sed_cmd`
     shift $(($OPTIND - 1))
@@ -35,6 +37,7 @@ function save_params()
 {
     config_var=$1
     output_file=$2
+    ./log.sh DEBUG "Saving parameters into $output_file"
     if [ -f $output_file ]; then
         rm $output_file;
     fi
