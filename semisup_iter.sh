@@ -12,7 +12,8 @@ save_params params $config_file
 make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir TEST_DATA=${params[TESTED_TRAIN_DATA]} >> $run_dir/stats
 make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir TEST_DATA=${params[TEST_DATA]} >> $run_dir/stats
     
-max_loss=${params[MAX_LOSS]}
+selection_metrics_threshold=${params[SELECTION_METRICS_THRESHOLD]}
+selection_metrics=${params[SELECTION_METRICS_TYPE]}
 
 all_base=`basename "${params[UNLABELED_DATA]}"`
 #$ML_FRAMEWORK_DIR/log.sh DEBUG "BASENAME: $all_base"
@@ -29,8 +30,8 @@ for file_part in ${params[UNLABELED_DATA]}; do
     
     run_in_parallel \
         "make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval test CONFIG_FILE=$config_file RUN_DIR=$run_dir TEST_DATA=$file_part; \
-            $ML_FRAMEWORK_DIR/log.sh INFO \"Adding system labels to the unlabeled data, if the minimum loss is <= $max_loss: $file_part + $result_file => $sys_labeled_data\"; \
-            $ML_FRAMEWORK_DIR/scripts/paste_data_results.sh $file_part $result_file | $ML_FRAMEWORK_DIR/scripts/filter_by_loss.pl $max_loss | $ML_FRAMEWORK_DIR/scripts/discretize_losses.pl | gzip -c > $sys_labeled_data; \
+            $ML_FRAMEWORK_DIR/log.sh INFO \"Adding system labels to the unlabeled data, if the metrics $selection_metrics_type is <= $selection_metrics_threshold: $file_part + $result_file => $sys_labeled_data\"; \
+            $ML_FRAMEWORK_DIR/scripts/paste_data_results.sh $file_part $result_file | $ML_FRAMEWORK_DIR/scripts/filter_by_loss.pl $selection_metrics_threshold --metrics $selection_metrics_type | $ML_FRAMEWORK_DIR/scripts/discretize_losses.pl | gzip -c > $sys_labeled_data; \
             touch $run_dir/done.$base" \
         "unlabeled.$base" -50 $run_dir/log 0
 
