@@ -87,8 +87,11 @@ function self_training() {
         make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="${params[ML_PARAMS_FOR_UNLABELED]}" >> $run_dir/iter_$iter/stats
         make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="${params[ML_PARAMS_FOR_UNLABELED]}" >> $run_dir/iter_$iter/stats
 
-        if [ ! -z $delible ]; then
+        if [ -z $delible ]; then
             init_model=`make -s -f makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data`
+            ./log.sh INFO "Not delible; using cumulated model $init_model as an initial model for the next iteration."
+        else
+            ./log.sh INFO "Delible; using gold-labeled model $init_model as an initial model for the next iteration."
         fi
     done
 
