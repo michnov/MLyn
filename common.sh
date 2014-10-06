@@ -3,7 +3,7 @@
 function run_in_parallel()
 {
     cmd=$1
-    echo_err $cmd
+    #echo_err $cmd
     lrc=${params[LRC]-1}
     if [ $lrc -eq 1 ]; then
         jobname=$2

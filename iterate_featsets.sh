@@ -84,15 +84,51 @@ function run_on_featset {
     
     #feat_list=${1-${params[FEAT_LIST]}}
     data_list=${params[DATA_LIST]-"TRAIN_DATA TEST_DATA"}
+    ./log.sh DEBUG "DATA_LIST: $data_list"
 
+    tmp_dir=${params[RUN_DIR]}/data
+    data_dir=$tmp_dir/processed
+    mkdir -p $data_dir
+
+    i=0
     for data_name in $data_list; do
-        make -s -f makefile.preprocess preprocess CONFIG_FILE=$config_file DATA=${params[$data_name]}
-        train_ready=`make -s -f makefile.preprocess data_ready_path CONFIG_FILE=$config_file DATA=${params[$data_name]}`
-        params[$data_name]=$train_ready 
+        data=${params[$data_name]}
+        
+        for orig_file in $data; do
+            filt_file=`preprocessed_file_name $orig_file $data_dir`
+            
+            # preprocess only if the result doesn't exist or is older
+            if [ $filt_file -ot $orig_file ]; then
+                ./log.sh INFO "Preprocessing data: $orig_file => $filt_file"
+                iter=`printf "%03d" $i`
+                run_in_parallel \
+                    "./preprocess.sh \
+                        -f $config_file \
+                        IN_FILE=$orig_file \
+                        OUT_FILE=$filt_file; \
+                     touch $tmp_dir/$iter.done;" \
+                    "preproc.$iter" -50 $tmp_dir/log 1
+                ((i++))
+            fi
+        done
+        params[$data_name]=`preprocessed_file_name "$data" $data_dir` 
+    done
+        
+    # wait until all experiments are acomplished
+    ./log.sh INFO "Waiting for all jobs to be completed..."
+    while [ `ls $tmp_dir/*.done 2> /dev/null | wc -l` -lt $i ]; do
+        ./log.sh DEBUG `ls $tmp_dir/*.done 2> /dev/null | wc -l` $i
+        sleep 10
     done
 
     unset params[FEAT_LIST]
     unset params[DATA_LIST]
 
     save_params params $config_file
+}
+
+function preprocessed_file_name() {
+    file_stem=`make -s -f makefile.common file_stem_asterisk FILE="$1"`
+    filt_file=$2/$file_stem.table
+    echo "$filt_file"
 }

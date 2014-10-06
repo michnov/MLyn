@@ -2,8 +2,10 @@
 
 source common.sh
 source params.sh
+prepare_run_dir
 
 config_file=${params[RUN_DIR]}/config
+save_params params $config_file
 
 source iterate_featsets.sh
 source iterate_mlmethods.sh

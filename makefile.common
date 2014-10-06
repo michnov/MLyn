@@ -8,7 +8,8 @@ LOG_WARN=$(LOGGER) WARN
 
 #---------------------------------
 
-data_stem = $(subst *,all,$(if $(filter %.table, $1),$(basename $(notdir $1)),$(notdir $1)))
+data_stem_asterisk = $(if $(filter %.table, $1),$(basename $(notdir $1)),$(notdir $1))
+data_stem = $(subst *,all,$(call data_stem_asterisk,$1))
 
 #------------ create directories -----------
 
@@ -19,3 +20,10 @@ include makefile.config
 $(RUN_DIR) :
 	mkdir $@
 
+FILE_STEM := $(call data_stem, $(FILE))
+FILE_STEM_ASTERISK := $(call data_stem_asterisk, $(FILE))
+
+file_stem :
+	echo $(FILE_STEM)
+file_stem_asterisk :
+	echo $(FILE_STEM_ASTERISK)

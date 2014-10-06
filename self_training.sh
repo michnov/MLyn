@@ -21,8 +21,8 @@ function self_training() {
     unlabeled_count=`ls $unlabeled_data | wc -l`
     if [ $unlabeled_count -eq 1 ]; then
         if [ ! -z $unlabeled_split_size ]; then
-        ./log.sh DEBUG "UNLABELED SPLIT SIZE = $unlabeled_split_size"
-            data_stem=`make -s -f makefile.preprocess data_stem DATA=${params[UNLABELED_DATA]}`
+            ./log.sh DEBUG "UNLABELED SPLIT SIZE = $unlabeled_split_size"
+            file_stem=`make -s -f makefile.common file_stem FILE=$unlabeled_data`
             zcat $unlabeled_data | scripts/split_on_empty_line.pl $unlabeled_split_size $run_dir/data/$data_stem.part
             unlabeled_data=$run_dir/data/$data_stem.part*
         fi

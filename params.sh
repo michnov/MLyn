@@ -56,23 +56,26 @@ function save_params()
     fi
     all_keys=`eval 'echo ${!'$config_var'[@]}'`
     for key in $all_keys; do
-        value=`eval 'echo ${'$config_var'['$key']}'`
+        value=`eval 'echo "${'$config_var'['$key']}"'`
         echo $key=$value >> $output_file
     done
 }
 
+function prepare_run_dir() 
+{
+    if [ -z ${params[DATE]} ]; then
+        params[DATE]=`date +%Y-%m-%d_%H-%M-%S`
+    fi
+    ./log.sh DEBUG "DATE = "${params[DATE]}
+    if [ -z ${params[RUN_DIR]} ]; then
+        if [ ! -z ${params[TMP_DIR]} ]; then
+            params[RUN_DIR]=${params[TMP_DIR]}/run_${params[DATE]}
+        else
+            params[RUN_DIR]=run_${params[DATE]}
+        fi
+    fi
+    mkdir -p ${params[RUN_DIR]}
+}
+
 declare -A params
 load_params params "$@"
-if [ -z ${params[DATE]} ]; then
-    params[DATE]=`date +%Y-%m-%d_%H-%M-%S`
-fi
-./log.sh DEBUG "DATE = "${params[DATE]}
-if [ -z ${params[RUN_DIR]} ]; then
-    if [ ! -z ${params[TMP_DIR]} ]; then
-        params[RUN_DIR]=${params[TMP_DIR]}/run_${params[DATE]}
-    else
-        params[RUN_DIR]=run_${params[DATE]}
-    fi
-fi
-mkdir -p ${params[RUN_DIR]}
-save_params params ${params[RUN_DIR]}/config
