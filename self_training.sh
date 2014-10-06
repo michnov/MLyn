@@ -74,24 +74,10 @@ function self_training() {
         #cat $run_dir/iter_$iter/data.to_merge.list | xargs zcat | gzip -c > $train_data
 
         ./log.sh INFO "Training and testing with the initial model: $label_model_path"
-        make -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$label_model_path > >(tee $run_dir/stats)
-        make -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$label_model_path > >(tee -a $run_dir/stats)
+        echo $iter > $run_dir/iter_$iter/stats
+        make -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$label_model_path > >(tee -a $run_dir/iter_$iter/stats)
+        make -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$label_model_path > >(tee -a $run_dir/iter_$iter/stats)
     done
+
+    paste $run_dir/iter_*/stats > $run_dir/stats
 }
-
-#    mkdir -p $(ST_DIR)/data/$$iter; \
-#    mkdir -p $(ST_DIR)/model/$$iter; \
-#    mkdir -p $(ST_DIR)/result/$$iter; \
-#    mkdir -p $(ST_DIR)/log/$$iter; \
-#    make -s test DATA_SOURCE=$(DATA_SOURCE) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(UNLABELED_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) MODEL_DIR=$(ST_DIR)/model/$$old_iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID); \
-#    resolved_data=$(ST_DIR)/data/$$iter/resolved_unlabeled.table; \
-#    scripts/paste_data_results.sh $(UNLABELED_SET) $(ST_DIR)/result/$$iter/$(UNLABELED_DATA_ID).$(ML_METHOD).$(ML_PARAMS_HASH).res | scripts/filter_by_loss.pl $(MAX_LOSS) | scripts/discretize_losses.pl | gzip -c > $$resolved_data; \
-#    new_train_data=$(ST_DIR)/data/$$iter/new_train.$(DATA_SOURCE).idx.table; \
-#    zcat $(TRAIN_SET) $$resolved_data | gzip -c > $$new_train_data; \
-#    ln -s $(TRAIN_SET) $(ST_DIR)/data/$$iter/$(TRAIN_DATA_NAME).$(DATA_SOURCE).idx.table; \
-#    ln -s $(TEST_SET) $(ST_DIR)/data/$$iter/$(TEST_DATA_NAME).$(DATA_SOURCE).idx.table; \
-#    make -s eval DATA_SOURCE=$(DATA_SOURCE) TRAIN_DATA_NAME=new_train TEST_DATA_NAME=$(TRAIN_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(ST_DIR)/data/$$iter MODEL_DIR=$(ST_DIR)/model/$$iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID) >> $(ST_DIR)/acc.$$iter.$(ML_ID); \
-#    make -s eval DATA_SOURCE=$(DATA_SOURCE) TRAIN_DATA_NAME=new_train TEST_DATA_NAME=$(TEST_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(ST_DIR)/data/$$iter MODEL_DIR=$(ST_DIR)/model/$$iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID) >> $(ST_DIR)/acc.$$iter.$(ML_ID); \
-
-#make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file TEST_DATA=${params[TRAIN_DATA]} > >(tee -a $run_dir/stats)
-#make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file TEST_DATA=${params[TEST_DATA]} > >(tee -a $run_dir/stats)
