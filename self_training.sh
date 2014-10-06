@@ -75,8 +75,8 @@ function self_training() {
 
         ./log.sh INFO "Training and testing with the initial model: $label_model_path"
         echo $iter > $run_dir/iter_$iter/stats
-        make -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$label_model_path > >(tee -a $run_dir/iter_$iter/stats)
-        make -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$label_model_path > >(tee -a $run_dir/iter_$iter/stats)
+        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$label_model_path > >(tee -a $run_dir/iter_$iter/stats)
+        make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$label_model_path > >(tee -a $run_dir/iter_$iter/stats)
     done
 
     paste $run_dir/iter_*/stats > $run_dir/stats
