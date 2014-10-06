@@ -29,7 +29,7 @@ if (keys %in_hash > 0) {
     print $_ while (<STDIN>);
 }
 
-while ( my ($feats, @rest) = Treex::Tool::ML::VowpalWabbit::Util::parse_singleline(*STDIN, {split_key_val => 1}) ) {
+while ( my ($feats, @rest) = Treex::Tool::ML::VowpalWabbit::Util::parse_singleline(*STDIN, {parse_feats => 'pair'}) ) {
     if (!defined $feats) {
         print "\n";
         next;

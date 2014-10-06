@@ -5,7 +5,7 @@ use strict;
 
 use Data::Dumper;
 use Getopt::Long;
-use Treex::Tool::ML::TabSpace::Util;
+use Treex::Tool::ML::VowpalWabbit::Util;
 use Treex::Core::Common;
 
 binmode STDIN, ":utf8";
@@ -21,8 +21,8 @@ GetOptions(
 #print STDERR Dumper(\@ids, \@cand_ids);
 
 my $USAGE = <<USAGE;
-Usage: $0 <language1_filtered_instances_labeled> --inst-id <id_name> <align_id_name> --cand-id <id_name> <align_id_name>
-    - input: language2 all instances unlabeled
+Usage: $0 <language2_all_instances_unlabeled> --inst-id <id_name> <align_id_name> --cand-id <id_name> <align_id_name>
+    - input: language1 filtered instances labeled
     - output: language2 filtered instances labeled
     - selects from language2_all_instances those, which are aligned with language1_filtered_instances
 USAGE
@@ -34,8 +34,7 @@ if (@ARGV < 1) {
 
 my %ids_h = ();
 
-open my $filt_fh, "<:utf8", $ARGV[0];
-while ( my $instance = Treex::Tool::ML::TabSpace::Util::parse_multiline($filt_fh, {split_key_val => 1}) ) {
+while ( my ($instance, $tag, $comment) = Treex::Tool::ML::VowpalWabbit::Util::parse_multiline(*STDIN, {split_key_val => 1}) ) {
     my ($feats, $losses) = @$instance;
     my ($cands_feats, $shared_feats) = @$feats;
     my %shared_feats_h = map {$_->[0] => $_->[1]} @$shared_feats;
@@ -74,11 +73,11 @@ while ( my $instance = Treex::Tool::ML::TabSpace::Util::parse_multiline($filt_fh
         log_info "No aligned positive candidates for an instance " . $id;
     }
 }
-close $filt_fh;
 
 #print STDERR Dumper(\%ids_h);
 
-while ( my $instance = Treex::Tool::ML::TabSpace::Util::parse_multiline(*STDIN, {split_key_val => 1}) ) {
+open my $filt_fh, "<:utf8", $ARGV[0];
+while ( my $instance = Treex::Tool::ML::VowpalWabbit::Util::parse_multiline($filt_fh, {split_key_val => 1}) ) {
     my ($feats, $old_losses) = @$instance;
     my ($cands_feats, $shared_feats) = @$feats;
     my %shared_feats_h = map {$_->[0] => $_->[1]} @$shared_feats;
@@ -114,6 +113,7 @@ while ( my $instance = Treex::Tool::ML::TabSpace::Util::parse_multiline(*STDIN, 
     }
     if ($has_positive) {
         #print STDERR "ALIGN_OK: " . $align_id . "\n";
-        print Treex::Tool::ML::TabSpace::Util::format_multiline($feats, \@new_losses);
+        print Treex::Tool::ML::VowpalWabbit::Util::format_multiline($feats, \@new_losses);
     }
 }
+close $filt_fh;
