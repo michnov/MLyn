@@ -75,6 +75,7 @@ skuska :
 	@echo $(RUN_DIR)
 	@echo $(TEST_DATA)
 	@echo $(TRAIN_DATA)
+	@echo $(FEAT_LIST)
 
 #----------- files ---------------
 
@@ -103,17 +104,20 @@ preprocess : $(TRAIN_DATA_READY) $(TEST_DATA_READY)
 
 #------------- symlink data files ----------
 
+.SECONDARY : $(DATA_DIR)/$(TRAIN_DATA_STEM).orig.table $(DATA_DIR)/$(TRAIN_DATA_STEM).filter_feats.table $(DATA_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).table
+.SECONDARY : $(DATA_DIR)/$(TEST_DATA_STEM).orig.table $(DATA_DIR)/$(TEST_DATA_STEM).filter_feats.table $(DATA_DIR)/$(TEST_DATA_STEM).$(ML_METHOD).table
+
+
 $(DATA_DIR)/%.orig.table : | $(DATA_DIR)
 	ln -s $(_DATA) $@
 
 #------------- feature filtering -----------------
 
-ifdef (FEAT_LIST)
-FILT_FEAT_FLAG := --in $(FEAT_LIST)
-endif
-
 $(DATA_DIR)/%.filter_feats.table : $(DATA_DIR)/%.orig.table
-	zcat $< | $(SCRIPT_DIR)/filter_feat.pl $(FILT_FEAT_FLAG) | gzip -c > $@
+	if [ _$(FEAT_LIST) != _ ]; then \
+		filt_feat_flag="--in $(FEAT_LIST)"; \
+	fi; \
+	zcat $< | $(SCRIPT_DIR)/filter_feat.pl $$filt_feat_flag | gzip -c > $@
 
 #------------- ML formatting -----------------
 
