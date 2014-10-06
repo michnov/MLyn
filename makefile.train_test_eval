@@ -1,0 +1,143 @@
+SHELL:=/bin/bash
+
+SCRIPT_DIR=scripts
+
+#----------- data ----------------
+#TRAIN_DATA
+#TEST_DATA
+#------------------------------------------- ML ---------------------------------------------------
+
+ML_METHOD=maxent
+#ML_METHOD=vw
+#ML_METHOD=sklearn.decision_trees
+
+ifeq ($(ML_METHOD),vw)
+ML_PARAMS=--passes 20
+endif
+
+ML_PARAMS_HASH = $(shell echo "$(ML_PARAMS)" | shasum | cut -c 1-5)
+
+#VW_APP=/net/work/people/mnovak/tools/x86_64/vowpal_wabbit/vowpalwabbit/vw
+VW_APP=/net/cluster/TMP/mnovak/tools/vowpal_wabbit/vowpalwabbit/vw
+
+#-------- directories --------------
+
+RUN_DIR=tte.run_dir
+
+TMP_DATA_DIR=$(RUN_DIR)/data
+MODEL_DIR=$(RUN_DIR)/model
+RESULT_DIR=$(RUN_DIR)/result
+
+#----------- files ---------------
+
+file_stem = $(if $(filter .table, $(suffix $1)),$(basename $(notdir $1)),$(notdir $1))
+
+TRAIN_DATA_STEM := $(call file_stem, $(TRAIN_DATA))
+TEST_DATA_STEM := $(call file_stem, $(TEST_DATA))
+
+MODEL_FILE = $(MODEL_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).model
+RESULT_FILE = $(RESULT_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).$(TEST_DATA_STEM).res
+
+
+#--------------------------------------- PREPROCESS -----------------------------------------------------------
+
+#------------ create directories -----------
+
+skuska :
+	@echo $(TMP_DATA_DIR)/$(TRAIN_DATA_STEM).table
+	@echo $(TMP_DATA_DIR)/$(TEST_DATA_STEM).table
+
+$(TMP_DATA_DIR) $(MODEL_DIR) $(RESULT_DIR) : | $(RUN_DIR)
+	mkdir $@
+
+$(RUN_DIR) :
+	mkdir $@
+
+#------------- symlink data files ----------
+
+$(TMP_DATA_DIR)/$(TRAIN_DATA_STEM).table : $(TRAIN_DATA) | $(TMP_DATA_DIR)
+	ln -s $< $@
+$(TMP_DATA_DIR)/$(TEST_DATA_STEM).table : $(TEST_DATA) | $(TMP_DATA_DIR)
+	ln -s $< $@
+
+#------------- feature filtering -----------------
+
+ifdef (FEAT_LIST)
+FILT_FEAT_FLAG := --in $(FEAT_LIST)
+endif
+
+$(TMP_DATA_DIR)/%.filter_feats.table : $(TMP_DATA_DIR)/%.table
+	zcat $< | $(SCRIPT_DIR)/filter_feat.pl $(FILT_FEAT_FLAG) | gzip -c > $@
+
+#------------- ML formatting -----------------
+
+TRAIN_DATA_READY = $(TMP_DATA_DIR)/$(TEST_DATA_STEM).table
+
+#TODO: vw files must be indexed first => separate targets for train and test files
+
+#$(TMP_DATA_DIR)/%.maxent.table : $(TMP_DATA_DIR)/%.filter_feats.table
+#	ln -s $< $@
+#$(TMP_DATA_DIR)/%.sklearn.*.table : $(TMP_DATA_DIR)/%.filter_feats.table
+#	ln -s $< $@
+$(TMP_DATA_DIR)/%.vw.table : $(TMP_DATA_DIR)/%.filter_feats.table
+	zcat $< | scripts/vw_convert.pl | gzip -c > $@
+$(TMP_DATA_DIR)/%.vw.ranking.table : $(TMP_DATA_DIR)/%.filter_feats.table
+	zcat $< | scripts/vw_convert.pl -m | gzip -c > $@
+
+#----------------------------------------- TRAIN --------------------------------------------------------------
+
+train : $(MODEL_FILE)
+
+$(MODEL_DIR)/$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).model     : $(TMP_DATA_DIR)/$(TRAIN_DATA_STEM).filter_feats.table | $(MODEL_DIR)
+	zcat $< | $(SCRIPT_DIR)/maxent.train.pl $@
+$(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).model         : $(TMP_DATA_DIR)/$(TRAIN_DATA_STEM).vw.table | $(MODEL_DIR)
+	$(VW_APP) -d $< -f $@ -b 20 --compressed \
+		--oaa `zcat $< | cut -f 1 | sort -n | tail -n1` $(ML_PARAMS) \
+		--holdout_off \
+		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).$$$$.cache; \
+	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).$$$$.cache
+$(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).model : $(TMP_DATA_DIR)/$(TRAIN_DATA_STEM).vw.ranking.table | $(MODEL_DIR)
+	$(VW_APP) -d $< -f $@ -b 20 --compressed \
+		--csoaa_ldf $(ML_PARAMS) \
+		--holdout_off \
+		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).$$$$.cache; \
+	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).$$$$.cache
+$(MODEL_DIR)/$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).model : $(TMP_DATA_DIR)/$(TRAIN_DATA_STEM).filter_feats.table | $(MODEL_DIR)
+	zcat $< | $(SCRIPT_DIR)/sklearn.train.py $* "$(ML_PARAMS)" $@
+
+clean_train:
+	-rm $(MODEL_FILE)
+
+#----------------------------------------- TEST --------------------------------------------------------------
+
+RESULT_FILE = $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).res
+
+test : $(RESULT_FILE)
+
+$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).res     : $(MODEL_FILE) $(TMP_DATA_DIR)/$(TEST_DATA_STEM).filter_feats.table | $(RESULT_DIR)
+	zcat $(word 2,$^) | $(SCRIPT_DIR)/maxent.test.pl $< > $@
+$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).res         : $(MODEL_FILE) $(TMP_DATA_DIR)/$(TEST_DATA_STEM).vw.table | $(RESULT_DIR)
+	zcat $(word 2,$^) | $(VW_APP) -t -i $< -p $@.$$$$ -b 20; \
+	perl -pe '\''$$_ =~ s/^(.*?)\..*? (.*?)$$/$$2\t$$1/;'\'' < $@.$$$$ > $@; \
+	rm $@.$$$$
+$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).res : $(MODEL_FILE) $(TMP_DATA_DIR)/$(TEST_DATA_STEM).vw.ranking.table | $(RESULT_DIR)
+	zcat $(word 2,$^) | $(VW_APP) -t -i $< -p $@ -b 20
+$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).res  : $(MODEL_FILE) $(TMP_DATA_DIR)/$(TEST_DATA_STEM).filter_feats.table | $(RESULT_DIR)
+	zcat $(word 2,$^) | $(SCRIPT_DIR)/sklearn.test.py $< > $@
+
+clean_test:
+	-rm $(RESULT_FILE)
+
+#----------------------------------------- EVAL --------------------------------------------------------------
+
+ifeq ($(findstring ranking,$(RESULT_FILE)),ranking)
+RANK_FLAG=--ranking
+RANK_EVAL_FLAG=--acc --prf
+endif
+
+eval : $(RESULT_FILE)
+	cat $< | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG)
+
+#---------------------------------------- CLEAN -------------------------------------------------------
+
+clean : clean_test clean_train
