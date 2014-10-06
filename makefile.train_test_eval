@@ -109,6 +109,9 @@ TEST_DATA_READY = $(DATA_DIR)/$(TEST_DATA_STEM).$(ML_METHOD).table
 
 preprocess : $(TRAIN_DATA_READY) $(TEST_DATA_READY)
 
+$(TRAIN_DATA_READY) : _DATA=$(TRAIN_DATA)
+$(TEST_DATA_READY) : _DATA=$(TEST_DATA)
+
 #------------- symlink data files ----------
 
 .SECONDARY : $(DATA_DIR)/$(TRAIN_DATA_STEM).orig.table $(DATA_DIR)/$(TRAIN_DATA_STEM).filter_feats.table $(DATA_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).table
@@ -147,7 +150,7 @@ $(DATA_DIR)/%.$(ML_METHOD).table : $(DATA_DIR)/%.filter_feats.table
 
 train : $(MODEL_FILE)
 
-$(MODEL_FILE) : _DATA=$(TRAIN_DATA)
+#$(MODEL_FILE) : _DATA=$(TRAIN_DATA)
 
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).model     : $(TRAIN_DATA_READY) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a maxent model: $< => $@" >&2
@@ -177,7 +180,7 @@ clean_train:
 
 test : $(RESULT_FILE)
 
-$(RESULT_FILE) : _DATA=$(TEST_DATA)
+#$(RESULT_FILE) : _DATA=$(TEST_DATA)
 
 $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).res     : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
 	$(LOG_INFO) "Predicting labels with a maxent model: $(word 2,$^) => $@" >&2

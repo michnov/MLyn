@@ -19,8 +19,14 @@ cat $mlmethod_list | grep -v "^#" > $run_dir/mlmethod_per_line.list
 if [ ${params[RANKING]}. == 1. ]; then
     cat $run_dir/mlmethod_per_line.list | grep "ranking" > $run_dir/mlmethod_per_line.list.tmp
     cp $run_dir/mlmethod_per_line.list.tmp $run_dir/mlmethod_per_line.list
+    rm $run_dir/mlmethod_per_line.list.tmp
     result_template=conf/result.ranking.template
 fi
+
+./log.sh INFO "Preprocessing the data used in the experiments..."
+cat $run_dir/mlmethod_per_line.list | cut -f1 -d: | sort | uniq | while read ml_method; do
+   make -s -f makefile.train_test_eval preprocess CONFIG_FILE=$config_file ML_METHOD=$ml_method  
+done
 
 iter=000
 # run an experiment for every ML method
@@ -42,10 +48,13 @@ cat $run_dir/mlmethod_per_line.list | while read ml_method_info; do
     ./log.sh INFO "Running an experiment no. $iter using the ML method $ml_method with params ($ml_params)"
     ./log.sh DEBUG "Its running directory is: $run_subdir"
 
+    data_dir=${params[DATA_DIR]-$run_dir/data}
+
     run_in_parallel \
         "./run_experiment.sh \
             -f $config_file \
             RUN_DIR=$run_subdir \
+            DATA_DIR=$data_dir \
             ML_METHOD=$ml_method \
             ML_PARAMS='$ml_params'; \
             touch $run_subdir/done;" \
@@ -60,5 +69,5 @@ while [ `ls $run_dir/*.mlmethod/done 2> /dev/null | wc -l` -lt $mlmethods_count 
 done
 
 # collect results
-./log.sh INFO "Collecting results of the experiments..."
+./log.sh INFO "Collecting results of the experiments to: $run_dir/stats"
 paste $result_template $run_dir/*.mlmethod/stats >> $run_dir/stats
