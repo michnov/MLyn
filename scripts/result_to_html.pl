@@ -32,8 +32,8 @@ sub ml_method {
     for (my $i = 0; $i < @$rest; $i++) {
         my $item = $rest->[$i];
         (my $border_style, $item) = _border_style($item);
-        my $colspan_str = @$colspans ? "colspan=\"$colspans->[$i]\"" : "";
-        my $th_str = "<th $colspan_str style=\"font-size:70%; $border_style\">$item</th>";
+    my $colspan_str = @$colspans ? "colspan=\"$colspans->[$i]\"" : "";
+    my $th_str = "<th $colspan_str style=\"font-size:70%; $border_style\">$item</th>";
         push @ths, $th_str;
     }
     return "<tr>" . (join "\t", @ths) . "</tr>";
@@ -96,7 +96,7 @@ sub _count_colspans {
 
     my @colspans = ();
     my $next_label = $lines->[$i+1][0];
-    return () if ($next_label eq "TRAIN:");
+    return () if ($next_label ne "ITER");
 
     my $l = 0;
     for (my $j = 1; $j < @{$lines->[$i+1]}; $j++) {
@@ -116,6 +116,7 @@ my @lines = <STDIN>;
 my @table_lines = map {chomp $_; [split /\t/, $_]} @lines; 
 
 
+my $in_table = 0;
 my $rowspan = 1;
 my $multicols_count = 0;
 my $label;
@@ -131,12 +132,21 @@ for (my $i = 0; $i < @table_lines; $i++) {
     }
 
     if ($label eq "INFO:") {
+        if ($in_table) {
+            $html_str .= "\n</table>";
+            $in_table = 0;
+        }
         $html_str .= info(@rest);
     }
     elsif ($label eq "FEATS:") {
+        if ($in_table) {
+            $html_str .= "\n</table>";
+            $in_table = 0;
+        }
         $html_str .= feats(@rest);
     }
     elsif ($label eq "ML_METHOD:") {
+        $in_table = 1;
         $html_str .= "<table style=\"border-collapse: collapse;\">\n";
         my @colspans = _count_colspans(\@table_lines, $i);
         $html_str .= ml_method(\@rest, \@colspans);
@@ -158,11 +168,15 @@ for (my $i = 0; $i < @table_lines; $i++) {
         }
         $html_str .= results(\@rest, $tr_style);
     }
-    elsif ($label eq "DEV:" || $label eq "TEST:" || $label eq "TEST_L2:") {
+    elsif ($label eq "TEST_L2:") {
         $html_str .= results(\@rest);
+    }
+    else {
+        my $tr_style = "";
         if ($rowspan == 1) {
-            $html_str .= "\n</table>";
+            $tr_style = "style=\"border-style: none none solid none; border-width: 2px;\"";
         }
+        $html_str .= results(\@rest, $tr_style);
     }
     
     $html_str .= "\n";
