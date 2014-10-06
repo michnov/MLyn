@@ -13,27 +13,35 @@ binmode STDOUT, ":utf8";
 my $default_diff_value = -10;
 
 my $USAGE = <<USAGE;
-Usage: $0 <upper_loss_limit> [--metrics|m <min_loss|diff_loss|avg_diff_loss>]
+Usage: $0 [--threshold|t <metrics_threshold>] [--metrics|m <min_loss|diff_loss|avg_diff_loss>]
     - filters out instances with a loss-based metrics greater than upper_loss_limit
     - works only for multiline instances so far
     
-    --metrics|m
+    --metrics|-m
         - specifies the type of metrics used
         - min_loss: minimum loss in a given instance; default
         - diff_loss: difference between the lowest and the second lowest loss; -10 if the instance consists of a single candidate
         - avg_diff_loss: difference between the minimum loss and the average value of the rest losses within the instance; -10 if the instance consists of a single candidate
+    --threshold|-t
+        - specifies the maximum value of metrics to pass the instance through
+        - default: 0
+    --help|-h
+        - prints this help
 USAGE
 
 my $metrics = "min_loss";
+my $threshold = 0;
+my $help;
 GetOptions(
     "metrics|m=s" => \$metrics,
+    "threshold|t=f" => \$threshold,
+    "help|h" => \$help,
 );
 
-if (@ARGV < 1) {
+if ($help) {
     print $USAGE;
     exit;
 }
-my $loss_limit = $ARGV[0];
 
 my $all_count = 0;
 my $ok_count = 0;
@@ -55,7 +63,7 @@ while ( my ($feats, $losses, $tags, $comments) = Treex::Tool::ML::VowpalWabbit::
     }
     
     #print STDERR "$min_loss\n";
-    if ($metrics_value < $loss_limit) {
+    if ($metrics_value <= $threshold) {
         print Treex::Tool::ML::VowpalWabbit::Util::format_multiline($feats, $losses, $comments);
         $ok_count++;
     }
