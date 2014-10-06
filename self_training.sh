@@ -15,19 +15,41 @@ max_loss=${params[MAX_LOSS]}
 
 i=0
 iter=`printf "%03d" $i`
-./train_test.sh -f $config_file RUN_DIR=$run_dir/"$iter"_iter DATA_DIR=$run_dir/data
+./train_test.sh -f $config_file RUN_DIR=$run_dir/iter_$iter DATA_DIR=$run_dir/data
+train_data_ready=`make -s -f makefile.preprocess data_ready_path CONFIG_FILE=$config_file DATA_DIR=$run_dir/data DATA=${params[TRAIN_DATA]}`
 for (( i=1; i<=$iter_count; i++ )); do
     old_iter=$iter
     iter=`printf "%03d" $i`
     for file_part in $unlabeled_prefix*; do
-        make -s -f makefile.train_test_eval test CONFIG_FILE=$config_file RUN_DIR=$run_dir/"$old_iter"_iter DATA_DIR=$run_dir/data TEST_DATA=$file_part
-        result_file=`make -s -f makefile.train_test_eval result_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/"$old_iter"_iter DATA_DIR=$run_dir/data TEST_DATA=$file_part`
-        sys_labeled_data=`make -s -f makefile.train_test_eval data_orig_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/"$iter"_iter _DATA=$file_part`
-        mkdir -p `dirname $sys_labeled_data`
-        ./log.sh INFO "Adding system labels to the unlabeled data, if the minimum loss is <= $max_loss: $file_part + $result_file => $sys_labeled_data"
-        scripts/paste_data_results.sh $file_part $result_file | scripts/filter_by_loss.pl $max_loss | scripts/discretize_losses.pl | gzip -c > $sys_labeled_data
-        make -s -f makefile.preprocess CONFIG_FILE=$config_file RUN_DIR=$run_dir/"$iter"_iter _DATA=$file_part
+        u_p_for_sed=`echo $unlabeled_prefix | sed 's/\//\\\\\//g'`;
+        number=`echo $file_part | sed 's/^'$u_p_for_sed'\([0-9]*\).*$/\1/'`
+        
+        result_file=`make -s -f makefile.train_test_eval result_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$old_iter DATA_DIR=$run_dir/data TEST_DATA=$file_part`
+        sys_labeled_data=`make -s -f makefile.preprocess data_orig_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter DATA=$file_part`
+        
+        run_in_parallel \
+            "make -s -f makefile.train_test_eval test CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$old_iter DATA_DIR=$run_dir/data TEST_DATA=$file_part; \
+                mkdir -p `dirname $sys_labeled_data`; \
+                ./log.sh INFO \"Adding system labels to the unlabeled data, if the minimum loss is <= $max_loss: $file_part + $result_file => $sys_labeled_data\"; \
+                scripts/paste_data_results.sh $file_part $result_file | scripts/filter_by_loss.pl $max_loss | scripts/discretize_losses.pl | gzip -c > $sys_labeled_data; \
+                make -s -f makefile.preprocess preprocess CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter DATA=$sys_labeled_data; \
+                touch $run_dir/iter_$iter/done.$number" \
+            "unlabeled.part.$number" -50 $run_dir/iter_$iter/log 0
+
+        make -s -f makefile.preprocess data_ready_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter DATA=$file_part >> $run_dir/iter_$iter/data.to_merge.list
     done
+
+    # wait until all experiments are acomplished
+    ./log.sh INFO "Waiting for all the experiments to be completed..."
+    parts_count=`ls $unlabeled_prefix* | wc -l`
+    while [ `ls $run_dir/iter_$iter/done.* 2> /dev/null | wc -l` -lt $parts_count ]; do
+        sleep 10
+    done
+
+    echo $train_data_ready >> $run_dir/iter_$iter/data.to_merge.list
+    cat $run_dir/iter_$iter/data.to_merge.list | xargs zcat | gzip -c > $run_dir/iter_$iter/data/all.data
+
+    ./train_test.sh -f $config_file RUN_DIR=$run_dir/iter_$iter DATA_DIR=$run_dir/data TRAIN_DATA_READY=$run_dir/iter_$iter/data/all.data TEST_DATA=${params[TRAIN_DATA]}
 done
 
 #    mkdir -p $(ST_DIR)/data/$$iter; \

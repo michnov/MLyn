@@ -61,7 +61,6 @@ RESULT_DIR=$(RUN_DIR)/result
 #========== reading variables from a config file ================
 # this must be placed after all definitions of public variables
 
-include makefile.config
 
 #----------- skuska --------------
 
@@ -93,6 +92,7 @@ $(MODEL_DIR) $(RESULT_DIR) : | $(RUN_DIR)
 TRAIN_DATA_READY = $(DATA_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).table
 TEST_DATA_READY = $(DATA_DIR)/$(TEST_DATA_STEM).$(ML_METHOD).table
 
+include makefile.config
 echo_ready :
 	echo $(TRAIN_DATA_READY)
 	echo $(TEST_DATA_READY)
@@ -104,7 +104,7 @@ $(TRAIN_DATA_READY) : _DATA=$(TRAIN_DATA)
 $(TEST_DATA_READY) : _DATA=$(TEST_DATA)
 
 $(DATA_DIR)/%.$(ML_METHOD).table :
-	$(MAKE) -f makefile.preprocess echo $@ DATA=$(_DATA)
+	$(MAKE) -f makefile.preprocess $@ DATA=$(_DATA)
 
 #test_data_path :
 #	echo $(TEST_DATA_READY)

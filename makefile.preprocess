@@ -10,20 +10,22 @@ DATA_READY = $(DATA_DIR)/$(DATA_STEM).$(ML_METHOD).table
 
 .SECONDARY : $(DATA_ORIG) $(DATA_FEAT) $(DATA_READY)
 
-echo :
-	echo $(DATA_ORIG)
-	echo $(DATA_FEAT)
-	echo $(DATA_READY)
+#echo :
+#	echo $(DATA_ORIG)
+#	echo $(DATA_FEAT)
+#	echo $(DATA_READY)
 
 preprocess : $(DATA_READY)
+
+data_orig_path :
+	echo $(DATA_ORIG)
+data_ready_path :
+	echo $(DATA_READY)
 
 #$(DATA_ORIG) : | $(DATA_DIR)
 $(DATA_DIR)/%.orig.table : | $(DATA_DIR)
 	$(LOG_INFO) "Symlinking a data file: $@ -> $(abspath $(DATA))" >&2
 	ln -s $(abspath $(DATA)) $@
-
-data_orig_path :
-	echo $(DATA_ORIG)
 
 #------------- feature filtering -----------------
 
