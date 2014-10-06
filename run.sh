@@ -42,8 +42,8 @@ cat $run_dir/featset_per_line.list | while read featset; do
     run_in_parallel \
         "./iterate_mlmethods.sh \
             -f $config_file \
-            featset=$feats \
-            run_dir=$run_subdir; \
+            FEAT_LIST=$feats \
+            RUN_DIR=$run_subdir; \
          touch $run_subdir/done;" \
         "featset_exper.$feats_sha" -50 $run_subdir/log 30
 done

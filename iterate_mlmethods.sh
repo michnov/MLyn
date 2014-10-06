@@ -9,7 +9,6 @@ save_params params $config_file
 
 ###################################
 
-featset=${params[FEATSET]}
 mlmethod_list=${params[MLMETHOD_LIST]}
 run_dir=${params[RUN_DIR]}
 
@@ -38,12 +37,12 @@ cat $run_dir/mlmethod_per_line.list | while read ml_method_info; do
     echo $ml_method $ml_params >> $run_subdir/stats
 
     run_in_parallel \
-        "echo ahoj" \
+        "./run_experiment.sh \
+            -f $config_file \
+            ML_METHOD=$ml_method \
+            ML_PARAMS=$ml_params; \
+            touch $run_subdir/done;" \
         "mlmethod_exper.$ml_method_sha" -20 $run_subdir/log 2
-        
-        # TODO
-        #"make -s tte SEMI_SUP=$(SEMI_SUP) DATA_SOURCE_1=$(DATA_SOURCE_1) DATA_SOURCE_2=$(DATA_SOURCE_2) DATA_DIR_1=$(DATA_DIR_1) DATA_DIR_2=$(DATA_DIR_2) RANKING=$(RANKING) CROSS_VALID_N=$(CROSS_VALID_N) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(TEST_DATA_NAME) DATA_SOURCE=$(DATA_SOURCE) STATS_FILE=$(TTE_FEATS_DIR)/acc.$$iter.$$featsha DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_FEATS_DIR)/$$featsha FEAT_LIST=$$feat_list FEAT_DESCR=\"$$feat_descr\"; \
-        #touch $(TTE_FEATS_DIR)/done.$$featsha;";
 done
 
 # wait until all experiments are acomplished
