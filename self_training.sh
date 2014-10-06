@@ -34,8 +34,10 @@ function self_training() {
 
     i=0
     iter=`printf "%03d" $i`
-    make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TRAIN_DATA]} > >(tee $run_dir/stats)
-    make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TEST_DATA]} > >(tee -a $run_dir/stats)
+    
+    echo $iter > $run_dir/iter_$iter/stats
+    make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TRAIN_DATA]} > >(tee -a $run_dir/iter_$iter/stats)
+    make -s -f makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TEST_DATA=${params[TEST_DATA]} > >(tee -a $run_dir/iter_$iter/stats)
     label_model_path=`make -s -f makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter`
     #train_data_ready=`make -s -f makefile.preprocess data_ready_path CONFIG_FILE=$config_file DATA_DIR=$run_dir/data DATA=${params[TRAIN_DATA]}`
     for (( i=1; i<=$iter_count; i++ )); do
