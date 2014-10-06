@@ -14,7 +14,7 @@ case $exper_type in
     cross-valid) ;;
     self-training) ;;
     co-training_align) ;;
-    *)  echo "Cannot recognize the type of an experiment: $exper_type" >&2;
+    *)  ./log.sh ERROR "Cannot recognize the type of an experiment: $exper_type" >&2;
         exit
         ;;
 esac
