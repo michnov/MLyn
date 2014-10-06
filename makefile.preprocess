@@ -56,6 +56,7 @@ $(DATA_READY) : $(DATA) | $(DATA_DIR)
 		ln -s $(abspath $<) $@; \
 		if ! cat $@ > /dev/null 2>&1; then \
 			$(LOG_WARN) "Too many symlinks for $(abspath $<). Copying instead: $(abspath $<) => $@" >&2; \
+			rm $@; \
 			cp $(abspath $<) $@; \
 		fi; \
 	fi

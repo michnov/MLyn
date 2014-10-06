@@ -4,6 +4,7 @@ SHELL:=/bin/bash
 
 LOGGER=./log.sh
 LOG_INFO=$(LOGGER) INFO
+LOG_WARN=$(LOGGER) WARN
 
 #---------------------------------
 
