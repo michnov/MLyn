@@ -5,9 +5,7 @@ include makefile.common
 #--------------------------------------- HELP --------------------------------------------------------
 
 define HELP_TEXT
-Usage: make [preprocess | train | test | eval | clean]
-	- preprocess: does the feature filtering and transforms the training and testing data 
-		in the tab_space format into a format that can be consumed by the given ML method
+Usage: make [train | test | eval | clean]
 	- train: creates a model from the training data
 		* performs preprocess before 
 	- test: label the testing data using a trained model
@@ -21,7 +19,6 @@ Usage: make [preprocess | train | test | eval | clean]
 		TRAIN_DATA : a path to the training data
 		TEST_DATA : a path to the testing data
 		RUN_DIR : a directory where all intermediate files are stored
-		FEAT_LIST : comma-separated list of features to use in a model; all features used if empty (default)
 		ML_METHOD : a ML method to be used (default = maxent)
 		ML_PARAMS : additional ML parameters (default = )
 		DATA_DIR : a directory with the data (default = $$RUN_DIR/data)
@@ -58,9 +55,14 @@ SCRIPT_DIR=scripts
 MODEL_DIR=$(RUN_DIR)/model
 RESULT_DIR=$(RUN_DIR)/result
 
+$(MODEL_DIR) $(RESULT_DIR) : | $(RUN_DIR)
+	mkdir $@
+
+
 #========== reading variables from a config file ================
 # this must be placed after all definitions of public variables
 
+include makefile.config
 
 #----------- skuska --------------
 
@@ -76,63 +78,34 @@ skuska :
 
 #----------- files ---------------
 
-TRAIN_DATA_STEM := $(call ml_method_stem, $(TRAIN_DATA))
-TEST_DATA_STEM := $(call ml_method_stem, $(TEST_DATA))
+TRAIN_DATA_STEM := $(call data_stem, $(TRAIN_DATA))
+TEST_DATA_STEM := $(call data_stem, $(TEST_DATA))
 
 MODEL_FILE = $(MODEL_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).model
 RESULT_FILE = $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).res
-
-#------------ create directories -----------
-
-$(MODEL_DIR) $(RESULT_DIR) : | $(RUN_DIR)
-	mkdir $@
-
-#--------------------------------------- PREPROCESS -----------------------------------------------------------
-
-TRAIN_DATA_READY = $(DATA_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).table
-TEST_DATA_READY = $(DATA_DIR)/$(TEST_DATA_STEM).$(ML_METHOD).table
-
-include makefile.config
-echo_ready :
-	echo $(TRAIN_DATA_READY)
-	echo $(TEST_DATA_READY)
-
-preprocess : $(TRAIN_DATA_READY) $(TEST_DATA_READY)
-
-$(TRAIN_DATA_READY) : _DATA=$(TRAIN_DATA)
-
-$(TEST_DATA_READY) : _DATA=$(TEST_DATA)
-
-$(DATA_DIR)/%.$(ML_METHOD).table :
-	$(MAKE) -f makefile.preprocess $@ DATA=$(_DATA)
-
-#test_data_path :
-#	echo $(TEST_DATA_READY)
 
 #----------------------------------------- TRAIN --------------------------------------------------------------
 
 train : $(MODEL_FILE)
 
-#$(MODEL_FILE) : _DATA=$(TRAIN_DATA)
-
-$(MODEL_DIR)/$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).model     : $(TRAIN_DATA_READY) | $(MODEL_DIR)
+$(MODEL_DIR)/$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).model     : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a maxent model: $< => $@" >&2
 	zcat $< | $(SCRIPT_DIR)/maxent.train.pl $@
-$(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).model         : $(TRAIN_DATA_READY) | $(MODEL_DIR)
+$(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).model         : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a VW-oaa model: $< => $@" >&2
-	$(VW_APP) -d $< -f $@ -b 20 --compressed \
+	zcat $< | cut -f2 --complement | $(VW_APP) -f $@ -b 20 \
 		--oaa `zcat $< | cut -f 1 | sort -n | tail -n1` $(ML_PARAMS) \
 		--holdout_off \
 		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).$$$$.cache
-$(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).model : $(TRAIN_DATA_READY) | $(MODEL_DIR)
+$(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).model : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a VW-csoaa_ldf (ranking) model: $< => $@" >&2
-	$(VW_APP) -d $< -f $@ -b 20 --compressed \
+	zcat $< | cut -f2 --complement | $(VW_APP) -f $@ -b 20 \
 		--csoaa_ldf $(ML_PARAMS) \
 		--holdout_off \
 		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).$$$$.cache
-$(MODEL_DIR)/$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).model : $(TRAIN_DATA_READY) | $(MODEL_DIR)
+$(MODEL_DIR)/$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).model : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a ScikitLearn ($*) model: $< => $@" >&2
 	zcat $< | $(SCRIPT_DIR)/sklearn.train.py $* "$(ML_PARAMS)" $@
 
@@ -143,20 +116,18 @@ clean_train:
 
 test : $(RESULT_FILE)
 
-#$(RESULT_FILE) : _DATA=$(TEST_DATA)
-
-$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).res     : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
+$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).res     : $(MODEL_FILE) $(TEST_DATA) | $(RESULT_DIR)
 	$(LOG_INFO) "Predicting labels with a maxent model: $(word 2,$^) => $@" >&2
 	zcat $(word 2,$^) | $(SCRIPT_DIR)/maxent.test.pl $< > $@
-$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).res         : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
+$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).res         : $(MODEL_FILE) $(TEST_DATA) | $(RESULT_DIR)
 	$(LOG_INFO) "Predicting labels with a VW-oaa model: $(word 2,$^) => $@" >&2
-	zcat $(word 2,$^) | $(VW_APP) -t -i $< -p $@.$$$$ -b 20; \
+	zcat $(word 2,$^) | cut -f2 --complement | $(VW_APP) -t -i $< -p $@.$$$$ -b 20; \
 	perl -pe '\''$$_ =~ s/^(.*?)\..*? (.*?)$$/$$2\t$$1/;'\'' < $@.$$$$ > $@; \
 	rm $@.$$$$
-$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).res : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
+$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).res : $(MODEL_FILE) $(TEST_DATA) | $(RESULT_DIR)
 	$(LOG_INFO) "Predicting labels with a VW-csoaa_ldf (ranking) model: $(word 2,$^) => $@" >&2
-	zcat $(word 2,$^) | $(VW_APP) -t -i $< -p $@ -b 20
-$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).res  : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
+	zcat $(word 2,$^) | cut -f2 --complement | $(VW_APP) -t -i $< -p $@ -b 20
+$(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).res  : $(MODEL_FILE) $(TEST_DATA) | $(RESULT_DIR)
 	$(LOG_INFO) "Predicting labels with a ScikitLearn ($*): $(word 2,$^) => $@" >&2
 	zcat $(word 2,$^) | $(SCRIPT_DIR)/sklearn.test.py $< > $@
 
