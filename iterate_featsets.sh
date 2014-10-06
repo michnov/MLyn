@@ -61,7 +61,7 @@ function iterate_featsets()
 
     # wait until all experiments are acomplished
     featset_count=`cat $run_dir/featset_per_line.list | wc -l`
-    wait_for_jobs $run_dir/*.featset/done $featset_count
+    wait_for_jobs "$run_dir/*.featset/done" $featset_count
 
     # collect results
     stats=$run_dir/stats
@@ -112,7 +112,7 @@ function run_on_featset {
     done
         
     # wait until all experiments are acomplished
-    wait_for_jobs $tmp_dir/*.done $i
+    wait_for_jobs "$tmp_dir/*.done" $i
 
     unset params[FEAT_LIST]
     unset params[DATA_LIST]
