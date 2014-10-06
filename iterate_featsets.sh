@@ -60,11 +60,8 @@ function iterate_featsets()
     done
 
     # wait until all experiments are acomplished
-    $ML_FRAMEWORK_DIR/log.sh INFO "Waiting for all the experiments to be completed..."
     featset_count=`cat $run_dir/featset_per_line.list | wc -l`
-    while [ `ls $run_dir/*.featset/done 2> /dev/null | wc -l` -lt $featset_count ]; do
-        sleep 10
-    done
+    wait_for_jobs $run_dir/*.featset/done $featset_count
 
     # collect results
     stats=$run_dir/stats
@@ -115,11 +112,7 @@ function run_on_featset {
     done
         
     # wait until all experiments are acomplished
-    $ML_FRAMEWORK_DIR/log.sh INFO "Waiting for all jobs to be completed..."
-    while [ `ls $tmp_dir/*.done 2> /dev/null | wc -l` -lt $i ]; do
-        $ML_FRAMEWORK_DIR/log.sh DEBUG `ls $tmp_dir/*.done 2> /dev/null | wc -l` $i
-        sleep 10
-    done
+    wait_for_jobs $tmp_dir/*.done $i
 
     unset params[FEAT_LIST]
     unset params[DATA_LIST]

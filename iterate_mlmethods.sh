@@ -61,11 +61,8 @@ function iterate_mlmethods() {
     done
 
     # wait until all experiments are acomplished
-    $ML_FRAMEWORK_DIR/log.sh INFO "Waiting for all the experiments to be completed..."
     mlmethods_count=`cat $run_dir/mlmethod_per_line.list | wc -l`
-    while [ `ls $run_dir/*.mlmethod/done 2> /dev/null | wc -l` -lt $mlmethods_count ]; do
-        sleep 5
-    done
+    wait_for_jobs $run_dir/*.mlmethod/done $mlmethods_count 5
 
     # collect results
     $ML_FRAMEWORK_DIR/log.sh INFO "Collecting results of the experiments to: $run_dir/stats"

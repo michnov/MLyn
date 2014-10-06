@@ -60,7 +60,7 @@ function co_training_ali() {
             "semisup_iter.l2.$iter" -30 $run_dir/log 0
 
         # wait until both experiments are acomplished
-        wait_for_jobs $run_dir/iter_$iter/done.semisup_iter.* 2 10
+        wait_for_jobs $run_dir/iter_$iter/done.semisup_iter.* 2
         
         if [ -z $delible ]; then
             l1_init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter/l1 TRAIN_DATA=$l1_train_data`
