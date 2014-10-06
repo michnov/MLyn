@@ -16,8 +16,8 @@ Usage: make [train | test | eval | clean]
 	Parameters:
 		CONFIG_FILE : all parameters can be defined also in a config file;
 			the value set as a command argument overrides the value set in the config file
-		TRAIN_DATA : a path to the training data
-		TEST_DATA : a path to the testing data
+		TRAIN_DATA : a path to the training data; multiple files can be specified by a wildcard (for the time being, it does not accept space or comma-separated files)
+		TEST_DATA : a path to the testing data; multiple files can be specified by a wildcard (for the time being, it does not accept space or comma-separated files)
 		RUN_DIR : a directory where all intermediate files are stored
 		ML_METHOD : a ML method to be used (default = maxent)
 		ML_PARAMS : additional ML parameters (default = )
@@ -88,30 +88,33 @@ TEST_DATA_STEM := $(call data_stem, $(TEST_DATA))
 MODEL_FILE = $(MODEL_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).model
 RESULT_FILE = $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).res
 
+stem :
+	echo $(TRAIN_DATA_STEM)
+
 #----------------------------------------- TRAIN --------------------------------------------------------------
 
 train : $(MODEL_FILE)
 
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).model     : $(TRAIN_DATA) | $(MODEL_DIR)
-	$(LOG_INFO) "Training a maxent model: $< => $@" >&2
-	zcat $< | $(SCRIPT_DIR)/maxent.train.pl $@
+	$(LOG_INFO) "Training a maxent model: $^ => $@" >&2
+	zcat $^ | $(SCRIPT_DIR)/maxent.train.pl $@
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).model         : $(TRAIN_DATA) | $(MODEL_DIR)
-	$(LOG_INFO) "Training a VW-oaa model: $< => $@" >&2
-	zcat $< | cut -f2 --complement | $(VW_APP) -f $@ $(INITIAL_MODEL_FLAGS) -b 20 \
-		--oaa `zcat $< | cut -f 1 | sort -n | tail -n1` $(ML_PARAMS) \
+	$(LOG_INFO) "Training a VW-oaa model: $^ => $@" >&2
+	zcat $^ | cut -f2 --complement | $(VW_APP) -f $@ $(INITIAL_MODEL_FLAGS) -b 20 \
+		--oaa `zcat $^ | cut -f 1 | sort -n | tail -n1` $(ML_PARAMS) \
 		--holdout_off \
 		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$(ML_PARAMS_HASH).$$$$.cache
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).model : $(TRAIN_DATA) | $(MODEL_DIR)
-	$(LOG_INFO) "Training a VW-csoaa_ldf (ranking) model: $< => $@" >&2
-	zcat $< | cut -f2 --complement | $(VW_APP) -f $@ $(INITIAL_MODEL_FLAGS) -b 20 \
+	$(LOG_INFO) "Training a VW-csoaa_ldf (ranking) model: $^ => $@" >&2
+	zcat $^ | cut -f2 --complement | $(VW_APP) -f $@ $(INITIAL_MODEL_FLAGS) -b 20 \
 		--csoaa_ldf $(ML_PARAMS) \
 		--holdout_off \
 		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$(ML_PARAMS_HASH).$$$$.cache
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).sklearn.%.$(ML_PARAMS_HASH).model : $(TRAIN_DATA) | $(MODEL_DIR)
-	$(LOG_INFO) "Training a ScikitLearn ($*) model: $< => $@" >&2
-	zcat $< | $(SCRIPT_DIR)/sklearn.train.py $* "$(ML_PARAMS)" $@
+	$(LOG_INFO) "Training a ScikitLearn ($*) model: $^ => $@" >&2
+	zcat $^ | $(SCRIPT_DIR)/sklearn.train.py $* "$(ML_PARAMS)" $@
 
 model_path:
 	echo $(MODEL_FILE)

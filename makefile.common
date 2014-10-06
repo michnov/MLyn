@@ -7,7 +7,7 @@ LOG_INFO=$(LOGGER) INFO
 
 #---------------------------------
 
-data_stem = $(if $(filter %.table, $1),$(basename $(notdir $1)),$(notdir $1))
+data_stem = $(subst *,all,$(if $(filter %.table, $1),$(basename $(notdir $1)),$(notdir $1)))
 
 #------------ create directories -----------
 
