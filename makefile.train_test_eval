@@ -1,10 +1,5 @@
 SHELL:=/bin/bash
 
-ifdef CONFIG_FILE
-CONFIG_CMD:=$(shell cat $(CONFIG_FILE))
-$(foreach ONE_CMD,$(CONFIG_CMD),$(eval $(ONE_CMD)))
-endif
-
 #--------------------------------------- HELP --------------------------------------------------------
 
 define HELP_TEXT
@@ -41,7 +36,6 @@ help :
 #TEST_DATA
 #------------------------------------------- ML ---------------------------------------------------
 
-
 ML_METHOD=maxent
 #ML_METHOD=vw
 #ML_METHOD=sklearn.decision_trees
@@ -65,6 +59,23 @@ DATA_DIR=$(RUN_DIR)/data
 MODEL_DIR=$(RUN_DIR)/model
 RESULT_DIR=$(RUN_DIR)/result
 
+#========== reading variables from a config file ================
+# this must be placed after all definitions of public variables
+
+ifdef CONFIG_FILE
+CONFIG_CMD:=$(shell cat $(CONFIG_FILE) | sed 's/ /__SPACE__/g')
+$(foreach ONE_CMD,$(CONFIG_CMD),$(eval $(subst __SPACE__, ,$(ONE_CMD))))
+endif
+
+#----------- skuska --------------
+
+skuska :
+	@echo $(ML_METHOD)
+	@echo $(ML_PARAMS)
+	@echo $(RUN_DIR)
+	@echo $(TEST_DATA)
+	@echo $(TRAIN_DATA)
+
 #----------- files ---------------
 
 file_stem = $(if $(filter .table, $(suffix $1)),$(basename $(notdir $1)),$(notdir $1))
@@ -73,8 +84,7 @@ TRAIN_DATA_STEM := $(call file_stem, $(TRAIN_DATA))
 TEST_DATA_STEM := $(call file_stem, $(TEST_DATA))
 
 MODEL_FILE = $(MODEL_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).model
-RESULT_FILE = $(RESULT_DIR)/$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).$(TEST_DATA_STEM).res
-
+RESULT_FILE = $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).res
 
 #------------ create directories -----------
 
@@ -93,10 +103,8 @@ preprocess : $(TRAIN_DATA_READY) $(TEST_DATA_READY)
 
 #------------- symlink data files ----------
 
-$(DATA_DIR)/$(TRAIN_DATA_STEM).table : $(TRAIN_DATA) | $(DATA_DIR)
-	ln -s $< $@
-$(DATA_DIR)/$(TEST_DATA_STEM).table : $(TEST_DATA) | $(DATA_DIR)
-	ln -s $< $@
+$(DATA_DIR)/%.orig.table : | $(DATA_DIR)
+	ln -s $(_DATA) $@
 
 #------------- feature filtering -----------------
 
@@ -104,7 +112,7 @@ ifdef (FEAT_LIST)
 FILT_FEAT_FLAG := --in $(FEAT_LIST)
 endif
 
-$(DATA_DIR)/%.filter_feats.table : $(DATA_DIR)/%.table
+$(DATA_DIR)/%.filter_feats.table : $(DATA_DIR)/%.orig.table
 	zcat $< | $(SCRIPT_DIR)/filter_feat.pl $(FILT_FEAT_FLAG) | gzip -c > $@
 
 #------------- ML formatting -----------------
@@ -124,6 +132,8 @@ $(DATA_DIR)/%.$(ML_METHOD).table : $(DATA_DIR)/%.filter_feats.table
 #----------------------------------------- TRAIN --------------------------------------------------------------
 
 train : $(MODEL_FILE)
+
+$(MODEL_FILE) : _DATA=$(TRAIN_DATA)
 
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).model     : $(TRAIN_DATA_READY) | $(MODEL_DIR)
 	zcat $< | $(SCRIPT_DIR)/maxent.train.pl $@
@@ -147,9 +157,9 @@ clean_train:
 
 #----------------------------------------- TEST --------------------------------------------------------------
 
-RESULT_FILE = $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).$(ML_METHOD).$(ML_PARAMS_HASH).res
-
 test : $(RESULT_FILE)
+
+$(RESULT_FILE) : _DATA_STEM=$(TEST_DATA_STEM) _DATA=$(TEST_DATA)
 
 $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).maxent.$(ML_PARAMS_HASH).res     : $(MODEL_FILE) $(TEST_DATA_READY) | $(RESULT_DIR)
 	zcat $(word 2,$^) | $(SCRIPT_DIR)/maxent.test.pl $< > $@
