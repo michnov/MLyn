@@ -96,7 +96,7 @@ function self_training() {
     done
 
     echo -en "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
-    if [ ${params[ML_PARAMS_FOR_UNLABELED]} != ${params[ML_PARAMS]} ]; then
+    if [ "${params[ML_PARAMS_FOR_UNLABELED]}" != "${params[ML_PARAMS]}" ]; then
         echo "("${params[ML_PARAMS_FOR_UNLABELED]}")" > $run_dir/stats
     else
         echo > $run_dir/stats
