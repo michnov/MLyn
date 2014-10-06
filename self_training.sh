@@ -13,21 +13,9 @@ function self_training() {
     ######################## Unlabeled data splitting #########################
     
     # check if the unlabeled data is a single file (and should be splitted) or it is multiple files defined by a wildcard
-    unlabeled_count=`ls $unlabeled_data | wc -l`
-    if [ $unlabeled_count -eq 1 ]; then
-        if [ ! -z $unlabeled_split_size ]; then
-            $ML_FRAMEWORK_DIR/log.sh DEBUG "UNLABELED SPLIT SIZE = $unlabeled_split_size"
-            file_stem=`make -s -f $ML_FRAMEWORK_DIR/makefile.common file_stem FILE=$unlabeled_data`
-            zcat $unlabeled_data | $ML_FRAMEWORK_DIR/scripts/split_on_empty_line.pl $unlabeled_split_size $run_dir/data/$data_stem.part
-            unlabeled_data=$run_dir/data/$data_stem.part*
-        fi
-    elif [ $unlabeled_count -eq 0 ]; then
-        $ML_FRAMEWORK_DIR/log.sh ERROR "UNLABELED_DATA must be defined."
-        exit 1
-    fi
+    unlabeled_data=`$ML_FRAMEWORK_DIR/scripts/data_split.sh "${params[UNLABELED_DATA]}" ${params[UNLABELED_SPLIT_SIZE]} $run_dir`
     $ML_FRAMEWORK_DIR/log.sh DEBUG "Unlabeled data stored in: $unlabeled_data"
-        
-    
+
     ######################## Self-training iterations ##########################
     
     # different settings of ML_PARAMS for the 0th and next iterations
