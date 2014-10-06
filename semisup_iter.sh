@@ -13,7 +13,7 @@ make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_f
 make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir TEST_DATA=${params[TEST_DATA]} >> $run_dir/stats
     
 selection_metrics_threshold=${params[SELECTION_METRICS_THRESHOLD]}
-selection_metrics=${params[SELECTION_METRICS_TYPE]}
+selection_metrics_type=${params[SELECTION_METRICS_TYPE]}
 
 all_base=`basename "${params[UNLABELED_DATA]}"`
 #$ML_FRAMEWORK_DIR/log.sh DEBUG "BASENAME: $all_base"
