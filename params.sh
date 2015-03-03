@@ -69,9 +69,9 @@ function prepare_run_dir()
     $ML_FRAMEWORK_DIR/log.sh DEBUG "DATE = "${params[DATE]}
     if [ -z ${params[RUN_DIR]} ]; then
         if [ ! -z ${params[TMP_DIR]} ]; then
-            params[RUN_DIR]=${params[TMP_DIR]}/run_${params[DATE]}
+            params[RUN_DIR]=${params[TMP_DIR]}/run_${params[DATE]}_$$
         else
-            params[RUN_DIR]=run_${params[DATE]}
+            params[RUN_DIR]=run_${params[DATE]}_$$
         fi
     fi
     mkdir -p ${params[RUN_DIR]}
