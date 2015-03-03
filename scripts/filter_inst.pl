@@ -3,7 +3,6 @@
 use strict;
 use warnings;
 
-use Treex::Tool::ML::TabSpace::Util;
 use Getopt::Long;
 
 my $in = '';
