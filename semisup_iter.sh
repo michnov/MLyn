@@ -8,18 +8,37 @@ run_dir=${params[RUN_DIR]}
 config_file=$run_dir/config
 save_params params $config_file
 
-
-make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir TEST_DATA=${params[TESTED_TRAIN_DATA]} >> $run_dir/stats
-make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir TEST_DATA=${params[TEST_DATA]} >> $run_dir/stats
-    
+pool_size=${params[POOL_SIZE]}
+unlabeled_data_size=${params[UNLABELED_DATA_SIZE]}
+iter=${params[ITER]}
+unlabeled_split_size=${params[UNLABELED_SPLIT_SIZE]}
 selection_metrics_threshold=${params[SELECTION_METRICS_THRESHOLD]}
 selection_metrics_type=${params[SELECTION_METRICS_TYPE]}
 
 all_base=`basename "${params[UNLABELED_DATA]}"`
-#$ML_FRAMEWORK_DIR/log.sh DEBUG "BASENAME: $all_base"
+unlabeled_data_unfold=`echo ${params[UNLABELED_DATA]}`
+
+# train and test the models
+make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir TEST_DATA=${params[TESTED_TRAIN_DATA]} >> $run_dir/stats
+make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir TEST_DATA=${params[TEST_DATA]} >> $run_dir/stats
+
+# get the indexes to be included in the pool
+if [ $pool_size -gt 0 ]; then
+    $ML_FRAMEWORK_DIR/scripts/rand_seq.pl $unlabeled_data_size $pool_size $iter > $run_dir/pool.idx
+    $ML_FRAMEWORK_DIR/scripts/partition_idx.pl "$unlabeled_split_size" < $run_dir/pool.idx > $run_dir/pool.parts.idx
+    mkdir -p $run_dir/data.pool
+    for (( i=0; i<${#unlabeled_data_unfold[@]}; i++ )); do
+        file_part=${unlabeled_data_unfold[$i]}
+        pool_idx=`cat $run_dir/pool.parts.idx | sed -n $(($i+1))'p'`
+        base=`basename $file_part`
+        zcat $file_part | $ML_FRAMEWORK_DIR/scripts/filter_inst.pl --multiline 1 --in $pool_idx | gzip -c > $run_dir/data.pool/$base
+    done
+    unlabeled_data_unfold=`echo $run_dir/data.pool/$all_base`
+fi
+    
 
 file_i=1
-for file_part in ${params[UNLABELED_DATA]}; do
+for file_part in $unlabeled_data_unfold; do
     #file_i_str=`printf "%03d" $file_i`
     base=`basename $file_part`
     
