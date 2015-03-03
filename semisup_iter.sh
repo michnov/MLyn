@@ -9,14 +9,13 @@ config_file=$run_dir/config
 save_params params $config_file
 
 pool_size=${params[POOL_SIZE]}
-unlabeled_data_size=${params[UNLABELED_DATA_SIZE]}
+unlabeled_part_sizes=${params[UNLABELED_PART_SIZES]}
 iter=${params[ITER]}
-unlabeled_split_size=${params[UNLABELED_SPLIT_SIZE]}
 selection_metrics_threshold=${params[SELECTION_METRICS_THRESHOLD]}
 selection_metrics_type=${params[SELECTION_METRICS_TYPE]}
 
 all_base=`basename "${params[UNLABELED_DATA]}"`
-unlabeled_data_unfold=`echo ${params[UNLABELED_DATA]}`
+unlabeled_data_unfold=(`echo ${params[UNLABELED_DATA]}`)
 
 # train and test the models
 make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir TEST_DATA=${params[TESTED_TRAIN_DATA]} >> $run_dir/stats
@@ -24,14 +23,19 @@ make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_f
 
 # get the indexes to be included in the pool
 if [ $pool_size -gt 0 ]; then
+    unlabeled_data_size=`cat $unlabeled_part_sizes | paste -sd+ | bc`
     $ML_FRAMEWORK_DIR/scripts/rand_seq.pl $unlabeled_data_size $pool_size $iter > $run_dir/pool.idx
-    $ML_FRAMEWORK_DIR/scripts/partition_idx.pl "$unlabeled_split_size" < $run_dir/pool.idx > $run_dir/pool.parts.idx
+    $ML_FRAMEWORK_DIR/scripts/partition_idx.pl -f $unlabeled_part_sizes < $run_dir/pool.idx > $run_dir/pool.parts.idx
     mkdir -p $run_dir/data.pool
     for (( i=0; i<${#unlabeled_data_unfold[@]}; i++ )); do
         file_part=${unlabeled_data_unfold[$i]}
         pool_idx=`cat $run_dir/pool.parts.idx | sed -n $(($i+1))'p'`
-        base=`basename $file_part`
-        zcat $file_part | $ML_FRAMEWORK_DIR/scripts/filter_inst.pl --multiline 1 --in $pool_idx | gzip -c > $run_dir/data.pool/$base
+        $ML_FRAMEWORK_DIR/log.sh DEBUG "FILE_PART: $file_part"
+        $ML_FRAMEWORK_DIR/log.sh DEBUG "POOL_IDX: $pool_idx"
+        if [ ! -z $pool_idx ]; then
+            base=`basename $file_part`
+            zcat $file_part | $ML_FRAMEWORK_DIR/scripts/filter_inst.pl --multiline 1 --in $pool_idx | gzip -c > $run_dir/data.pool/$base
+        fi
     done
     unlabeled_data_unfold=`echo $run_dir/data.pool/$all_base`
 fi
@@ -58,5 +62,5 @@ for file_part in $unlabeled_data_unfold; do
 done
 
 # wait until all experiments are acomplished
-unlabeled_count=`ls ${params[UNLABELED_DATA]} | wc -l`
+unlabeled_count=`ls $unlabeled_data_unfold | wc -l`
 wait_for_jobs "$run_dir/done.$all_base" $unlabeled_count

@@ -2,6 +2,8 @@
 
 function self_training() {
 
+    $ML_FRAMEWORK_DIR/log.sh INFO "Starting self-training..."
+
     run_dir=${params[RUN_DIR]}
     
     iter_count=${params[ITER_COUNT]-"10"}
@@ -10,14 +12,19 @@ function self_training() {
     delible=${params[DELIBLE]}
     train_data=${params[TRAIN_DATA]}
 
-    # count the number of instances (so far only for the ranking-style data)
-    unlabeled_data_size=`zcat $unlabeled_data | $ML_FRAMEWORK_DIR/scripts/count_ranking_instances.pl`
-    
     ######################## Unlabeled data splitting #########################
     
     # check if the unlabeled data is a single file (and should be splitted) or it is multiple files defined by a wildcard
     unlabeled_data=`$ML_FRAMEWORK_DIR/scripts/data_split.sh "$unlabeled_data" "$unlabeled_split_size" $run_dir`
     $ML_FRAMEWORK_DIR/log.sh DEBUG "Unlabeled data stored in: $unlabeled_data"
+    
+    # count the number of instances (so far only for the ranking-style data)
+    $ML_FRAMEWORK_DIR/log.sh INFO "Counting the number of instances in UNLABELED_DATA. This might take a few minutes..."
+    unlabeled_base=`basename "$unlabeled_data"`
+    for file in $unlabeled_data; do
+        zcat $file | $ML_FRAMEWORK_DIR/scripts/count_ranking_instances.pl >> $run_dir/data/instances_per_part.$unlabeled_base
+    done
+    
 
     ######################## Self-training iterations ##########################
     
@@ -40,7 +47,7 @@ function self_training() {
             ML_PARAMS="$ml_params" \
             INITIAL_MODEL=$init_model \
             ITER=$i \
-            UNLABELED_DATA_SIZE=$unlabeled_data_size \
+            UNLABELED_PART_SIZES=$run_dir/data/instances_per_part.$unlabeled_base \
             RUN_DIR=$run_dir/iter_$iter
 
             

@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+use Getopt::Long;
+
 my $USAGE = <<USAGE;
 
 USAGE: $0 <part_size>
@@ -12,24 +14,50 @@ USAGE: $0 <part_size>
 * part_size defined a size of the partition
 USAGE
 
+my $part_size;
+my $size_file;
+GetOptions(
+    "size|s=i" => \$part_size,
+    "file|f=s" => \$size_file,
+);
+
 #if (@ARGV < 1) {
 #    print STDERR $USAGE;
 #    exit;
 #}
-my $part_size = $ARGV[0];
 
-if (!$part_size) {
+if (!$part_size && !$size_file) {
     my @idx = map {chomp $_; $_} (<STDIN>);
     print join ",", @idx;
     print "\n";
     exit;
 }
 
+my @accum_sizes;
+if (defined $size_file) {
+    open my $f, "<", $size_file;
+    my @part_sizes = map {chomp $_; $_} <$f>;
+    close $f;
+    @accum_sizes = ($part_sizes[0]);
+    for (my $i = 1; $i < @part_sizes; $i++) {
+        push @accum_sizes, $accum_sizes[$i-1] + $part_sizes[$i];
+    }
+}
 my @parts = ();
-foreach my $num (<STDIN>) {
+while (my $num = <STDIN>) {
     chomp $num;
-    my $part_no = int($num / $part_size);
-    my $part_idx = $num % $part_size;
+    # calculate the part number and the index within this part
+    my $part_no;
+    my $part_idx;
+    if (@accum_sizes) {
+        $part_no = scalar(grep {$num >= $_} @accum_sizes);
+        $part_idx = $part_no ? $num - $accum_sizes[$part_no-1] : $num;
+    }
+    else {
+        $part_no = int($num / $part_size);
+        $part_idx = $num % $part_size;
+    }
+    # setting the index for a particular part
     if (defined $parts[$part_no]) {
         push @{$parts[$part_no]}, $part_idx;
     }
@@ -37,6 +65,7 @@ foreach my $num (<STDIN>) {
         $parts[$part_no] = [$part_idx];
     }
 }
+
 foreach my $part (@parts) {
     my $str = defined $part ? (join ",", @$part) : "";
     print "$str\n";
