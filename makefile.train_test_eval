@@ -129,12 +129,12 @@ $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).maxent.res     : $(MODEL_FILE
 	zcat $(word 2,$^) | $(SCRIPT_DIR)/maxent.test.pl $< > $@
 $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.res         : $(MODEL_FILE) $(TEST_DATA) | $(RESULT_DIR)
 	$(LOG_INFO) "Predicting labels with a VW-oaa model: $< + $(word 2,$^) => $@" >&2
-	zcat $(word 2,$^) | cut -f2 --complement | $(VW_APP) -t -i $< -p $@.$$$$ -b 20; \
+	zcat $(word 2,$^) | cut -f2 --complement | $(VW_APP) -t -i $< -r $@.$$$$ -b 20; \
 	perl -pe '\''$$_ =~ s/^(.*?)\..*? (.*?)$$/$$2\t$$1/;'\'' < $@.$$$$ > $@; \
 	rm $@.$$$$
 $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).vw.ranking.res : $(MODEL_FILE) $(TEST_DATA) | $(RESULT_DIR)
 	$(LOG_INFO) "Predicting labels with a VW-csoaa_ldf (ranking) model: $< + $(word 2,$^) => $@" >&2
-	zcat $(word 2,$^) | cut -f2 --complement | $(VW_APP) -t -i $< -p $@ -b 20
+	zcat $(word 2,$^) | cut -f2 --complement | $(VW_APP) -t -i $< -r $@ -b 20
 $(RESULT_DIR)/$(TEST_DATA_STEM).$(TRAIN_DATA_STEM).sklearn.%.res  : $(MODEL_FILE) $(TEST_DATA) | $(RESULT_DIR)
 	$(LOG_INFO) "Predicting labels with a ScikitLearn ($*): $< + $(word 2,$^) => $@" >&2
 	zcat $(word 2,$^) | $(SCRIPT_DIR)/sklearn.test.py $< > $@
