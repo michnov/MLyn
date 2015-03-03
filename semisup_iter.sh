@@ -30,8 +30,6 @@ if [ $pool_size -gt 0 ]; then
     for (( i=0; i<${#unlabeled_data_unfold[@]}; i++ )); do
         file_part=${unlabeled_data_unfold[$i]}
         pool_idx=`cat $run_dir/pool.parts.idx | sed -n $(($i+1))'p'`
-        $ML_FRAMEWORK_DIR/log.sh DEBUG "FILE_PART: $file_part"
-        $ML_FRAMEWORK_DIR/log.sh DEBUG "POOL_IDX: $pool_idx"
         if [ ! -z $pool_idx ]; then
             base=`basename $file_part`
             zcat $file_part | $ML_FRAMEWORK_DIR/scripts/filter_inst.pl --multiline 1 --in $pool_idx | gzip -c > $run_dir/data.pool/$base

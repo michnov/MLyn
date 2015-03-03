@@ -5,6 +5,7 @@ SHELL:=/bin/bash
 LOGGER=$(ML_FRAMEWORK_DIR)/log.sh
 LOG_INFO=$(LOGGER) INFO
 LOG_WARN=$(LOGGER) WARN
+LOG_DEBUG=$(LOGGER) DEBUG
 
 #------------ create directories -----------
 

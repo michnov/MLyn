@@ -69,14 +69,17 @@ include $(ML_FRAMEWORK_DIR)/makefile.config
 #----------- skuska --------------
 
 skuska :
-	@echo -e "[$$(date '+%F %T')]\tasd"
-	@echo $(ML_METHOD)
-	@echo $(ML_PARAMS)
-	@echo $(RUN_DIR)
-	@echo $(TEST_DATA)
-	@echo $(TRAIN_DATA)
-	@echo $(FEAT_LIST)
-	@echo $(abspath $(TRAIN_DATA))
+	skuska=(--csoaa_ldf mc --f log); \
+	skuska=($${skuska[@]:2}); \
+	echo $${skuska[@]}
+#	@echo -e "[$$(date '+%F %T')]\tasd"
+#	@echo $(ML_METHOD)
+#	@echo $(ML_PARAMS)
+#	@echo $(RUN_DIR)
+#	@echo $(TEST_DATA)
+#	@echo $(TRAIN_DATA)
+#	@echo $(FEAT_LIST)
+#	@echo $(abspath $(TRAIN_DATA))
 
 #----------- files ---------------
 
@@ -98,15 +101,25 @@ $(MODEL_DIR)/$(TRAIN_DATA_STEM).maxent.model     : $(TRAIN_DATA) | $(MODEL_DIR)
 	zcat $^ | $(SCRIPT_DIR)/maxent.train.pl $@
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.model         : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a VW-oaa model: $^ => $@" >&2
-	zcat $^ | cut -f2 --complement | $(VW_APP) -f $@ $(INITIAL_MODEL_FLAGS) -b 20 \
+	if [ ! -z $(INITIAL_MODEL) ]; then \
+		$(LOG_INFO) "Using an initial model: $(INITIAL_MODEL)"; \
+		initial_model_flag="-i $(INITIAL_MODEL)"; \
+	fi; \
+	zcat $^ | cut -f2 --complement | $(VW_APP) -f $@ $$initial_model_flag -b 20 \
 		--oaa `zcat $^ | cut -f 1 | sort -n | tail -n1` $(ML_PARAMS) \
 		--holdout_off \
 		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$$$$.cache
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.model : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a VW-csoaa_ldf (ranking) model: $^ => $@" >&2
-	zcat $^ | cut -f2 --complement | $(VW_APP) -f $@ $(INITIAL_MODEL_FLAGS) -b 20 \
-		--csoaa_ldf $(ML_PARAMS) \
+	ml_flag=(--csoaa_ldf $(ML_PARAMS)); \
+	if [ ! -z $(INITIAL_MODEL) ]; then \
+		$(LOG_INFO) "Using an initial model: $(INITIAL_MODEL)"; \
+		initial_model_flag="-i $(INITIAL_MODEL)"; \
+		ml_flag=($${ml_flag[@]:2}); \
+	fi; \
+	zcat $^ | cut -f2 --complement | $(VW_APP) -f $@ $$initial_model_flag -b 20 \
+		$${ml_flag[@]} \
 		--holdout_off \
 		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$$$$.cache
