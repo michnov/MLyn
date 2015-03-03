@@ -99,14 +99,14 @@ $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.model         : $(TRAIN_DATA) | $(MODEL_DIR)
 	zcat $^ | cut -f2 --complement | $(VW_APP) -f $@ -b 20 \
 		--oaa `zcat $^ | cut -f 1 | sort -n | tail -n1` $(ML_PARAMS) \
 		--holdout_off \
-		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$$$$.cache \
+		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$$$$.cache
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.model : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a VW-csoaa_ldf (ranking) model: $^ => $@" >&2
 	zcat $^ | cut -f2 --complement | $(VW_APP) -f $@ -b 20 \
 		--csoaa_ldf $(ML_PARAMS) \
 		--holdout_off \
-		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$$$$.cache \
+		-c -k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$$$$.cache
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).sklearn.%.model : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a ScikitLearn ($*) model: $^ => $@" >&2
