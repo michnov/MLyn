@@ -45,7 +45,7 @@ function self_training() {
             RUN_DIR=$run_dir/iter_$iter
 
             
-        if [ -n $delible ]; then
+        if [ -n "$delible" -a "$delible" -ne 0 ]; then
             system_labeled_data=$run_dir/iter_$iter/data/`basename "$unlabeled_data"`
             $ML_FRAMEWORK_DIR/log.sh INFO "Delible; using gold-labeled training data and $system_labeled_data as a training data for the next iteration."
             #init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_000`
