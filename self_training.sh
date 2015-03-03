@@ -42,7 +42,7 @@ function self_training() {
         echo $iter > $run_dir/iter_$iter/stats
 
         $ML_FRAMEWORK_DIR/semisup_iter.sh -f $config_file \
-            TRAIN_DATA=$train_data \
+            TRAIN_DATA="$train_data" \
             TESTED_TRAIN_DATA=${params[TRAIN_DATA]} \
             ML_PARAMS="$ml_params" \
             ITER=$i \
