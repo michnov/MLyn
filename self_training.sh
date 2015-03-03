@@ -11,6 +11,7 @@ function self_training() {
     unlabeled_data=${params[UNLABELED_DATA]}
     delible=${params[DELIBLE]}
     train_data=${params[TRAIN_DATA]}
+    ml_params=${params[ML_PARAMS]}
 
     ######################## Unlabeled data splitting #########################
     
@@ -27,12 +28,6 @@ function self_training() {
     
 
     ######################## Self-training iterations ##########################
-    
-    # different settings of ML_PARAMS for the 0th and next iterations
-    if [ -z "${params[ML_PARAMS_FOR_UNLABELED]}" ]; then
-        params[ML_PARAMS_FOR_UNLABELED]=${params[ML_PARAMS]}
-    fi
-    ml_params=${params[ML_PARAMS]}
 
     # iterations
     for (( i=0; i<$iter_count; i++ )); do
@@ -67,7 +62,6 @@ function self_training() {
         fi
         train_data="${params[TRAIN_DATA]} $system_labeled_data"
         #train_data=$run_dir/iter_$iter/data/`basename "$unlabeled_data"`
-        ml_params=${params[ML_PARAMS_FOR_UNLABELED]}
 
         prev_iter=$iter
     done
@@ -81,12 +75,7 @@ function self_training() {
 
     ############################ Collecting statistics #########################
     
-    echo -en "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
-    if [ "${params[ML_PARAMS_FOR_UNLABELED]}" != "${params[ML_PARAMS]}" ]; then
-        echo "("${params[ML_PARAMS_FOR_UNLABELED]}")" > $run_dir/stats
-    else
-        echo > $run_dir/stats
-    fi
+    echo -e "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
     # a header used for iter results
     echo "ITER" > $run_dir/stats.header
     print_ranking_header "TRAIN" >> $run_dir/stats.header
