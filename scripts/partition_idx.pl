@@ -19,7 +19,9 @@ USAGE
 my $part_size = $ARGV[0];
 
 if (!$part_size) {
-    print $_ while (<STDIN>);
+    my @idx = map {chomp $_; $_} (<STDIN>);
+    print join ",", @idx;
+    print "\n";
     exit;
 }
 
@@ -36,6 +38,6 @@ foreach my $num (<STDIN>) {
     }
 }
 foreach my $part (@parts) {
-    my $str = defined $part ? (join " ", @$part) : "";
+    my $str = defined $part ? (join ",", @$part) : "";
     print "$str\n";
 }
