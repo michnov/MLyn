@@ -70,8 +70,8 @@ function self_training() {
     iter=`printf "%03d" $iter_count`
     mkdir -p $run_dir/iter_$iter
     echo $iter > $run_dir/iter_$iter/stats
-    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/stats
-    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/stats
+    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA="$train_data" TEST_DATA=${params[TRAIN_DATA]} ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/stats
+    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA="$train_data" TEST_DATA=${params[TEST_DATA]} ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/stats
 
     ############################ Collecting statistics #########################
     
