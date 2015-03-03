@@ -35,9 +35,9 @@ sub read_instance {
     }
 }
 
-if (!defined $n) {
-    print $_ while (<STDIN>);
-}
+#if (!defined $n) {
+#    print $_ while (<STDIN>);
+#}
 
 my %in_hash = map {$_ => 1} split /,/, $in;
 my %out_hash = map {$_ => 1} split /,/, $out;
@@ -57,8 +57,15 @@ if (keys %in_hash > 0) {
 my $inst_num = 0;
 while (my $inst = read_instance(*STDIN, $multiline)) {
     #print STDERR "$print $inst_num $n ".($inst_num % $n)."\n";
-    if ($print xor $hash{$inst_num % $n}) {
-        print $inst;
+    if (defined $n) {
+        if ($print xor $hash{$inst_num % $n}) {
+            print $inst;
+        }
+    }
+    else {
+        if ($print xor $hash{$inst_num}) {
+            print $inst;
+        }
     }
     $inst_num++;
 }
