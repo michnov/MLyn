@@ -45,29 +45,39 @@ function self_training() {
             TRAIN_DATA=$train_data \
             TESTED_TRAIN_DATA=${params[TRAIN_DATA]} \
             ML_PARAMS="$ml_params" \
-            INITIAL_MODEL=$init_model \
             ITER=$i \
             UNLABELED_PART_SIZES=$run_dir/data/instances_per_part.$unlabeled_base \
             RUN_DIR=$run_dir/iter_$iter
 
             
-        if [ -z $delible ]; then
-            init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data`
-            $ML_FRAMEWORK_DIR/log.sh INFO "Not delible; using cumulated model $init_model as an initial model for the next iteration."
+        if [ -n $delible ]; then
+            system_labeled_data=$run_dir/iter_$iter/data/`basename "$unlabeled_data"`
+            $ML_FRAMEWORK_DIR/log.sh INFO "Delible; using gold-labeled training data and $system_labeled_data as a training data for the next iteration."
+            #init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_000`
+            #$ML_FRAMEWORK_DIR/log.sh INFO "Delible; using gold-labeled model $init_model as an initial model for the next iteration."
         else
-            init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_000`
-            $ML_FRAMEWORK_DIR/log.sh INFO "Delible; using gold-labeled model $init_model as an initial model for the next iteration."
+            if [ -n $prev_iter ]; then
+                prev_iter_system_labeled_data=$run_dir/iter_$prev_iter/data/all.system_labeled.table
+            fi
+            system_labeled_data=$run_dir/iter_$iter/data/all.system_labeled.table 
+            zcat $prev_iter_system_labeled_data $run_dir/iter_$iter/data/`basename "$unlabeled_data"` | gzip -c > $system_labeled_data
+            $ML_FRAMEWORK_DIR/log.sh INFO "Not delible; using gold-labeled training data and cumulated data in $system_labeled_data as a training data for the next iteration."
+            #init_model=`make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval model_path CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data`
+            #$ML_FRAMEWORK_DIR/log.sh INFO "Not delible; using cumulated model $init_model as an initial model for the next iteration."
         fi
-        train_data=$run_dir/iter_$iter/data/`basename "$unlabeled_data"`
+        train_data="${params[TRAIN_DATA]} $system_labeled_data"
+        #train_data=$run_dir/iter_$iter/data/`basename "$unlabeled_data"`
         ml_params=${params[ML_PARAMS_FOR_UNLABELED]}
+
+        prev_iter=$iter
     done
 
     # the final iteration - just training and testing
     iter=`printf "%03d" $iter_count`
     mkdir -p $run_dir/iter_$iter
     echo $iter > $run_dir/iter_$iter/stats
-    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/stats
-    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} INITIAL_MODEL=$init_model ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/stats
+    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TRAIN_DATA]} ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/stats
+    make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file RUN_DIR=$run_dir/iter_$iter TRAIN_DATA=$train_data TEST_DATA=${params[TEST_DATA]} ML_PARAMS="$ml_params" >> $run_dir/iter_$iter/stats
 
     ############################ Collecting statistics #########################
     
