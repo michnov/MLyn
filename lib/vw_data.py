@@ -1,4 +1,5 @@
 import re
+import sys
 
 class VowpalWabbitData:
 
@@ -11,6 +12,7 @@ class VowpalWabbitData:
         X = []
         Y = []
         losses = []
+        line_num = 0
         for line in input_file:
             line.rstrip("\n")
             
@@ -44,9 +46,13 @@ class VowpalWabbitData:
 
                 # extract a feat hash
                 feats_name_valued = [ i+'=1' if not re.search("=", i) else i for i in feats ]
-                feat_hash = { (ns+"^"+k):v for (k,v) in (tuple(s.split("=")) for s in feats_name_valued) }
+                feat_hash = { (ns+"^"+k):v for (k,v) in (tuple(s.split("=",1)) for s in feats_name_valued) }
                 all_feat_hash.update(feat_hash)
 
             X.append(all_feat_hash)
+
+            line_num += 1
+            if line_num % 10000 == 0:
+                print >> sys.stderr, "Number of lines read: " + str(line_num)
         
         return (X, Y)
