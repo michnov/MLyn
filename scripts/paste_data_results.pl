@@ -21,6 +21,7 @@ while (my $line = <$res_fh>) {
         $curr_res->{$idx} = $loss;
     }
 }
+close $res_fh;
 
 $curr_res = shift @results;
 while (my $line = <STDIN>) {
