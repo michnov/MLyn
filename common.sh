@@ -11,7 +11,7 @@ function run_in_parallel()
         logdir=$4
         timeout=$5
         $ML_FRAMEWORK_DIR/log.sh INFO "Running job $jobname on cluster. The logfile can be found in $logdir"
-        qsubmit --jobname="$jobname" --mem="1g" --priority="$priority" --logdir="$logdir" \
+        qsubmit --jobname="$jobname" --mem="5g" --priority="$priority" --logdir="$logdir" \
             "$cmd"
         sleep $timeout
     else
