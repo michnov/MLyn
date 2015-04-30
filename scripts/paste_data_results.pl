@@ -17,7 +17,8 @@ while (my $line = <$res_fh>) {
         }
     }
     else {
-        my ($idx, $loss) = split /:/, $line;
+        my ($idx_loss, $tag) = split / /, $line;
+        my ($idx, $loss) = split /:/, $idx_loss;
         $curr_res->{$idx} = $loss;
     }
 }
