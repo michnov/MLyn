@@ -55,6 +55,9 @@ class Model:
         return self.model.predict_proba(x)
 
     def predict_loss(self, X):
+        if self.model.__class__.__name__ == "Perceptron":
+            X = self.vectorizer.transform(X)
+            return -self.model.decision_function(X)
         probs = self.predict_proba(X)
         return probs[:,0]
 
