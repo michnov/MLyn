@@ -2,7 +2,7 @@
 
 import os, sys, getopt
 
-lib_path = os.path.abspath('lib')
+lib_path = os.path.join(sys.path[0], os.path.pardir, 'lib')
 sys.path.append(lib_path)
 
 import model
