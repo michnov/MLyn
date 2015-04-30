@@ -34,7 +34,7 @@ class Model:
         elif (model_type == "decision_trees"):
             self.model = DecisionTreeClassifier(random_state=0)
         elif (model_type == "log_regression"):
-            self.model = LogisticRegression()
+            self.model = eval("LogisticRegression(" + model_params + ")")
         elif (model_type == "perceptron"):
             self.model = Perceptron()
         else:
