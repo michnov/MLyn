@@ -54,6 +54,10 @@ class Model:
         x = self.vectorizer.transform(x)
         return self.model.predict_proba(x)
 
+    def predict_loss(self, X):
+        probs = self.predict_proba(X)
+        return probs[:,0]
+
     def score(self, X, y):
         X = self.vectorizer.transform(X)
         return self.model.score(X, y)
