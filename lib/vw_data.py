@@ -9,8 +9,11 @@ class VowpalWabbitData:
         self.ranking = ranking
 
     def read(self, input_file):
+        all_X = []
+        all_tags = []
         X = []
         Y = []
+        tags = []
         losses = []
         line_num = 0
         for line in input_file:
@@ -19,6 +22,10 @@ class VowpalWabbitData:
             # empty line indicates a new instance if ranking=1
             if re.search("^\s+$", line):
                 if self.ranking:
+                    all_X.append(X)
+                    X = []
+                    all_tags.append(tags)
+                    tags = []
                     Y += [ x <= min(losses) for x in losses ]
                     losses = []
                 continue
@@ -28,6 +35,7 @@ class VowpalWabbitData:
             # process the label part
             label_part = parts.pop(0)
             (label_loss, tag) = label_part.split()
+            tags.append(tag)
             (label, loss) = label_loss.split(":")
             if self.ranking:
                 losses.append(loss)
@@ -54,5 +62,9 @@ class VowpalWabbitData:
             line_num += 1
             if line_num % 10000 == 0:
                 print >> sys.stderr, "Number of lines read: " + str(line_num)
+
+        if not self.ranking:
+            all_X.append(X)
+            all_tags.append(tags)
         
-        return (X, Y)
+        return (all_X, Y, tags)

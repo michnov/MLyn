@@ -37,7 +37,15 @@ print >> sys.stderr, "Reading the data..."
 X = []
 Y = []
 in_data = VowpalWabbitData(ranking=ranking)
-(X, Y) = in_data.read(sys.stdin)
+(X_all, Y, tags) = in_data.read(sys.stdin)
+
+print X_all
+
+X = []
+for x in X_all:
+    X += x
+
+print X
 
 print >> sys.stderr, "Building the model..."
 h = HTMLParser.HTMLParser()
