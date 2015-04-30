@@ -29,10 +29,11 @@ if [ $pool_size -gt 0 ]; then
     mkdir -p $run_dir/data.pool
     for (( i=0; i<${#unlabeled_data_unfold[@]}; i++ )); do
         file_part=${unlabeled_data_unfold[$i]}
-        pool_idx=`cat $run_dir/pool.parts.idx | sed -n $(($i+1))'p'`
-        if [ ! -z $pool_idx ]; then
+        cat $run_dir/pool.parts.idx | sed -n $(($i+1))'p' > $run_dir/pool.part_i.idx
+        if [ -s $run_dir/pool.part_i.idx ]; then
             base=`basename $file_part`
-            zcat $file_part | $ML_FRAMEWORK_DIR/scripts/filter_inst.pl --multiline 1 --in $pool_idx | gzip -c > $run_dir/data.pool/$base
+            zcat $file_part | $ML_FRAMEWORK_DIR/scripts/filter_inst.pl --multiline 1 --in $run_dir/pool.part_i.idx | gzip -c > $run_dir/data.pool/$base
+            rm $run_dir/pool.part_i.idx
         fi
     done
     unlabeled_data_unfold=`echo $run_dir/data.pool/$all_base`

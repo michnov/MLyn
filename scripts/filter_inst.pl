@@ -17,6 +17,17 @@ GetOptions (
     "n=i" => \$n,
 );
 
+sub prepare_index_hash {
+    my ($index_str) = @_;
+    # it can be a file path
+    if (-f $index_str) {
+        open my $fh, "<", $index_str;
+        $index_str = join "", (<$fh>);
+    }
+    my %index_hash = map {$_ => 1} split /[,\s]/, $index_str;
+    return \%index_hash;
+}
+
 # we could use Treex::Tool::ML::TabSpace::Util but it doesn't have to be parsed in such a detailed extent
 sub read_instance {
     my ($fh, $multiline) = @_;
@@ -39,17 +50,14 @@ sub read_instance {
 #    print $_ while (<STDIN>);
 #}
 
-my %in_hash = map {$_ => 1} split /,/, $in;
-my %out_hash = map {$_ => 1} split /,/, $out;
-
 my $print;
-my %hash;
-if (keys %in_hash > 0) {
+my $hash;
+if (defined $in) {
     $print = 0;
-    %hash = %in_hash;
-} elsif (keys %out_hash > 0) {
+    $hash = prepare_index_hash($in);
+} elsif (defined $out) {
     $print = 1;
-    %hash = %out_hash;
+    $hash = prepare_index_hash($out);
 } else {
     print $_ while (<STDIN>);
 }
@@ -58,12 +66,12 @@ my $inst_num = 0;
 while (my $inst = read_instance(*STDIN, $multiline)) {
     #print STDERR "$print $inst_num $n ".($inst_num % $n)."\n";
     if (defined $n) {
-        if ($print xor $hash{$inst_num % $n}) {
+        if ($print xor $hash->{$inst_num % $n}) {
             print $inst;
         }
     }
     else {
-        if ($print xor $hash{$inst_num}) {
+        if ($print xor $hash->{$inst_num}) {
             print $inst;
         }
     }
