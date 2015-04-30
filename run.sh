@@ -19,3 +19,7 @@ cp $info_file $stats_file
 rm $info_file
 
 $ML_FRAMEWORK_DIR/log.sh INFO "Complete results stored in: $stats_file"
+
+$ML_FRAMEWORK_DIR/scripts/result_to_html.pl < $stats_file > $stats_file'.html'
+
+$ML_FRAMEWORK_DIR/log.sh INFO "Complete results in HTML stored in: $stats_file"".html"
