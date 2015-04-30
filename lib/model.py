@@ -3,10 +3,12 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import Perceptron
 from sklearn.feature_extraction import DictVectorizer
 from sklearn import tree
 import cPickle
 import baseline
+import sys
 
 class Model:
 
@@ -33,10 +35,12 @@ class Model:
             self.model = DecisionTreeClassifier(random_state=0)
         elif (model_type == "log_regression"):
             self.model = LogisticRegression()
+        elif (model_type == "perceptron"):
+            self.model = Perceptron()
         else:
             print >> sys.stderr, "Model of type " + model_type + " is not supported."
 
-        self.vectorizer = DictVectorizer(sparse=False)
+        self.vectorizer = DictVectorizer(sparse=True)
     
     def fit(self, X, y):
         X = self.vectorizer.fit_transform(X)
