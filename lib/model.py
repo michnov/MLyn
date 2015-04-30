@@ -36,7 +36,7 @@ class Model:
         elif (model_type == "log_regression"):
             self.model = eval("LogisticRegression(" + model_params + ")")
         elif (model_type == "perceptron"):
-            self.model = Perceptron()
+            self.model = eval("Perceptron(" + model_params + ")")
         else:
             print >> sys.stderr, "Model of type " + model_type + " is not supported."
 
