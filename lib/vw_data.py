@@ -67,4 +67,4 @@ class VowpalWabbitData:
             all_X.append(X)
             all_tags.append(tags)
         
-        return (all_X, Y, tags)
+        return (all_X, Y, all_tags)
