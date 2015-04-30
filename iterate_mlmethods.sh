@@ -35,8 +35,9 @@ function iterate_mlmethods() {
     cat $run_dir/mlmethod_per_line.list | while read ml_method_info; do
         iter=`perl -e 'my $x = shift @ARGV; $x++; printf "%03s", $x;' $iter`
         
-        ml_method=`echo $ml_method_info | cut -f1 -d':'`
-        ml_params=`echo $ml_method_info | cut -f2- -d':'`
+        ml_method=`echo $ml_method_info | cut -s -f1 -d':'`
+        ml_method=${ml_method:-$ml_method_info}
+        ml_params=`echo $ml_method_info | cut -s -f2- -d':'`
         ml_method_sha=`echo "$ml_method_info" | shasum | cut -c 1-5`
 
         run_subdir=$run_dir/$iter.$ml_method_sha.mlmethod

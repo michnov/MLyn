@@ -43,9 +43,21 @@ sub merge_ns {
     return $merged_ns;
 }
 
+my $skip_all = undef;
 while (my $line = <>) {
     
     my ($shared_label, $shared_ns_to_feats, $shared_rest) = parse_instance($line);
+    if (!defined $skip_all && $shared_label !~ /^shared/) {
+        $skip_all = 1;
+        print $line;
+        while ($line = <>) {
+            print $line;
+        }
+        next;
+    }
+    else {
+        $skip_all = 0;
+    }
     if ($shared_label !~ /^shared/) {
         next;
     }
