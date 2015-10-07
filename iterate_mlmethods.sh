@@ -14,15 +14,12 @@ function iterate_mlmethods() {
     mlmethod_list=${params[ML_METHOD_LIST]}
     run_dir=${params[RUN_DIR]}
 
-    result_template=conf/result.template
-
     $ML_FRAMEWORK_DIR/log.sh DEBUG "Filtering the ML method list: $mlmethod_list => $run_dir/mlmethod_per_line.list"
     cat $mlmethod_list | grep -v "^#" > $run_dir/mlmethod_per_line.list
     if [ ${params[RANKING]}. == 1. ]; then
         cat $run_dir/mlmethod_per_line.list | grep "ranking" > $run_dir/mlmethod_per_line.list.tmp
         cp $run_dir/mlmethod_per_line.list.tmp $run_dir/mlmethod_per_line.list
         rm $run_dir/mlmethod_per_line.list.tmp
-        result_template=conf/result.ranking.template
     fi
 
 #    $ML_FRAMEWORK_DIR/log.sh INFO "Preprocessing the data used in the experiments..."
