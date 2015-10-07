@@ -39,5 +39,5 @@ function train_test() {
     # printing the results
     echo -e "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
     paste $run_dir/stats.header $run_dir/stats.numbers >> $run_dir/stats
-    $run_dir/stats.header $run_dir/stats.numbers
+    rm $run_dir/stats.header $run_dir/stats.numbers
 }
