@@ -40,9 +40,9 @@ while (my $line = <STDIN>) {
             }
         }
     }
-    # TODO: non-ranking should be adjusted to the new version of VW
-    #else {
-    #    print join " ", (1, 1, $pred_str == $true_str ? 1 : 0);
-    #    print "\n";
-    #}
+    else {
+        my ($pred_str, $true_str) = split /\s*/, $line;
+        print join " ", (1, 1, $pred_str == $true_str ? 1 : 0);
+        print "\n";
+    }
 }
