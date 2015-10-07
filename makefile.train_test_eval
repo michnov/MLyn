@@ -98,6 +98,7 @@ $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.model         : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a VW-oaa model: $^ => $@" >&2
 	zcat $^ | cut -f2 --complement | $(VW_APP) -f $@ -b 20 \
 		--oaa `zcat $^ | cut -f 1 -d' ' | sort -n | tail -n1` $(ML_PARAMS) \
+		--loss_function logistic \
 		--holdout_off \
 		-k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$$$$.cache; \
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$$$$.cache
