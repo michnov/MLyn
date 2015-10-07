@@ -146,17 +146,17 @@ function co_training_ali() {
     else
         echo > $run_dir/stats
     fi
+
+    # collect all numbers
+    paste $run_dir/iter_*/stats >> $run_dir/stats.numbers
+
     # a header used for iter results
     echo "ITER" > $run_dir/stats.header
-    print_ranking_header "TRAIN_L1" >> $run_dir/stats.header
-    print_ranking_header "TEST_L1" >> $run_dir/stats.header
-    print_ranking_header "TRAIN_L2" >> $run_dir/stats.header
-    print_ranking_header "TEST_L2" >> $run_dir/stats.header
+    print_header $run_dir/stats.numbers "TRAIN_L1" "TEST_L1" "TRAIN_L2" "TEST_L2" >> $run_dir/stats.header
     
-    echo -e "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
-    paste $run_dir/stats.header $run_dir/iter_*/stats >> $run_dir/stats
+    paste $run_dir/stats.header $run_dir/stats.numbers >> $run_dir/stats
     sed -i 's/$/|/' $run_dir/stats
-    rm $run_dir/stats.header
+    rm $run_dir/stats.header $run_dir/stats.numbers
 }
 
 function transfer_labels_via_align()

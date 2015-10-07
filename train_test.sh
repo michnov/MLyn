@@ -32,7 +32,7 @@ function train_test() {
             exit
         fi
         make -s -f $ML_FRAMEWORK_DIR/makefile.train_test_eval eval CONFIG_FILE=$config_file TRAIN_DATA=$train_data TEST_DATA=$data_path >> $run_dir/stats.numbers
-        print_ranking_header $data_name >> $run_dir/stats.header
+        print_header $run_dir/stats.numbers $data_name >> $run_dir/stats.header
     done
 
     # printing the results

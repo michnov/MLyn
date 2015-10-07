@@ -46,3 +46,17 @@ function print_ranking_header() {
     echo
     echo
 }
+
+function print_header() {
+    stats_size=`cat $1 | wc -l`
+    shift
+    one_label_size=$(( $stats_size / $# ))
+    for (( i=0; i<$stats_size; i++ )); do
+        if [ $(( $i % $one_label_size )) -eq 0 ]; then
+            echo "$1:"
+            shift
+        else
+            echo
+        fi
+    done
+}

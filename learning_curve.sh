@@ -31,14 +31,16 @@ function learning_curve() {
     wait_for_jobs "$run_dir/done.*" $i
     
     ############################ Collecting statistics #########################
+   
+    # all numbers
+    paste $run_dir/*_sample_*/stats >> $run_dir/stats.numbers
     
     # a header used for sample results
     echo "TRAIN_SAMPLE" > $run_dir/stats.header
-    print_ranking_header "TRAIN" >> $run_dir/stats.header
-    print_ranking_header "TEST" >> $run_dir/stats.header
+    print_header $run_dir/stats.numbers "TRAIN" "TEST" >> $run_dir/stats.header
     
     echo -e "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
-    paste $run_dir/stats.header $run_dir/*_sample_*/stats >> $run_dir/stats
+    paste $run_dir/stats.header $run_dir/stats.numbers >> $run_dir/stats
     sed -i 's/$/|/' $run_dir/stats
-    rm $run_dir/stats.header
+    rm $run_dir/stats.header $run_dir/stats.numbers
 }
