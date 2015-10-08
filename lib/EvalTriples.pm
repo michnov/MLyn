@@ -20,45 +20,45 @@ sub prf {
 
 sub acc_strict {
     my ($true, $pred, $both) = @_;
+    return 0 if ($both == 0);
+    return 1 if (($true == $pred) && ($true == 0));
     return 1 if (($true == $pred) && ($true == $both));
     return 0;
 }
 
 sub acc_lenient {
     my ($true, $pred, $both) = @_;
-    return 1 if ($both > 0);
+    return 0 if ($both == 0);
     return 1 if (($true == $pred) && ($true == 0));
+    return 1 if (($true > 0) && ($pred > 0) && ($both > 0));
     return 0;
 }
 
 sub acc_weighted {
     my ($true, $pred, $both) = @_;
-    return 1 if (($true == $pred) && ($true == $both));
+    return 0 if ($both == 0);
+    return 1 if (($true == $pred) && ($true == 0));
     my ($p, $r, $f) = prf($true, $pred, $both);
     return $f;
 }
 
 sub prf_strict {
     my ($true, $pred, $both) = @_;
-    if (($true == $pred) && ($true == $both)) {
-        return (1, 1, 1) if ($true > 0);
-        return (0, 0, 0);
-    }
-    return (map {$_ > 0} ($true, $pred), 0);
-    #if ($true == 0) {
-    #    return (0, 1, 0);
-    #}
-    #return (1, 0, 0);
+    return (0, 0, 0) if (($true == 0) && ($pred == 0));
+    return (1, 1, 1) if (($true == $pred) && ($true == $both));
+    return (map {$_ > 0 ? 1 : 0} ($true, $pred), 0);
 }
 
 sub prf_lenient {
     my ($true, $pred, $both) = @_;
+    return (0, 0, 0) if (($true == 0) && ($pred == 0));
     return (1, 1, 1) if ($both > 0);
     return (map {$_ > 0} ($true, $pred), 0);
 }
 
 sub prf_weighted {
     my ($true, $pred, $both) = @_;
+    return (0, 0, 0) if (($true == 0) && ($pred == 0));
     return ($true, $pred, $both);
 }
 
