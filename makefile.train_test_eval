@@ -157,12 +157,12 @@ result_path :
 
 ifeq ($(findstring ranking,$(RESULT_FILE)),ranking)
 RANK_FLAG=--ranking
-RANK_EVAL_FLAG=--acc --prf
 endif
+EVAL_FLAG=--acc --prf
 
 eval : $(RESULT_FILE)
 	$(LOG_INFO) "Evaluating the predicted labelling: $<" >&2
-	cat $< | $(SCRIPT_DIR)/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG)
+	cat $< | $(SCRIPT_DIR)/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(EVAL_FLAG)
 
 #---------------------------------------- CLEAN -------------------------------------------------------
 
