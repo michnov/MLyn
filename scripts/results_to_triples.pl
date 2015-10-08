@@ -15,6 +15,7 @@ my @true_idx = ();
 my $self_idx;
 while (my $line = <STDIN>) {
     chomp $line;
+# TODO non-ranking adjusted to return (0, 0, 1) if we correctly guess other than a specified class
     if ($ranking) {
         if ($line =~ /^\s*$/) {
             my ($pred_idx, @other_idx) = sort {$pred_costs{$a} <=> $pred_costs{$b}} keys %pred_costs;
@@ -41,8 +42,14 @@ while (my $line = <STDIN>) {
         }
     }
     else {
-        my ($pred_str, $true_str) = split /\s*/, $line;
-        print join " ", (1, 1, $pred_str == $true_str ? 1 : 0);
+        my ($true_str, $pred_str) = split /\s+/, $line;
+        if ($true_str =~ /-/) {
+            ($true_str, my $fscore_label) = split /-/, $true_str;
+            print join " ", ($true_str == $fscore_label ? 1 : 0, $pred_str == $fscore_label ? 1 : 0, $pred_str == $true_str ? 1 : 0);
+        }
+        else {
+            print join " ", (1, 1, $pred_str == $true_str ? 1 : 0);
+        }
         print "\n";
     }
 }
