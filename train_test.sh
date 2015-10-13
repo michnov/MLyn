@@ -16,10 +16,9 @@ function train_test() {
 
     train_data=${params[TRAIN_DATA]}
     
-    test_data_names="${params[TEST_DATA_LIST]}"
-    if [ -z "$test_data_names" ]; then
-        test_data_names="TRAIN_DATA TEST_DATA"
-    fi
+    # default values for test_data_names
+    test_data_names=${params[DATA_LIST]:-"TRAIN_DATA TEST_DATA"}
+    test_data_names=${params[TEST_DATA_LIST]:-$test_data_names}
    
     # make the files empty if existing
     cat /dev/null > $run_dir/stats.numbers

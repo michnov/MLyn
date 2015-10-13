@@ -80,7 +80,7 @@ function run_on_featset {
     # unless feat_list is defined, the original full data is symlinked
     
     #feat_list=${1-${params[FEAT_LIST]}}
-    data_list=${params[DATA_LIST]-"TRAIN_DATA TEST_DATA"}
+    data_list=${params[DATA_LIST]:-"TRAIN_DATA TEST_DATA"}
     $ML_FRAMEWORK_DIR/log.sh DEBUG "DATA_LIST: $data_list"
 
     tmp_dir=${params[RUN_DIR]}/data
@@ -118,7 +118,10 @@ function run_on_featset {
     wait_for_jobs "$tmp_dir/*.done" $i
 
     unset params[FEAT_LIST]
-    unset params[DATA_LIST]
+    
+    ## TODO: I don't know why this unset was here - probably due to semi-supervised learning???
+    ## but if it's here, DATA_LIST as a default value of TEST_DATA_LIST does not work
+    #unset params[DATA_LIST]
 
     save_params params $config_file
 }
