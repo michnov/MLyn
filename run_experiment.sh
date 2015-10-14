@@ -14,6 +14,7 @@ source $ML_FRAMEWORK_DIR/train_test.sh
 source $ML_FRAMEWORK_DIR/self_training.sh
 source $ML_FRAMEWORK_DIR/co_training_ali.sh
 source $ML_FRAMEWORK_DIR/learning_curve.sh
+source $ML_FRAMEWORK_DIR/cross_validation.sh
 
 
 ###### ITERATE OVER FEATSETS #######
@@ -34,7 +35,7 @@ else
         case $exper_type in
             train_test) train_test ;;
             learning_curve) learning_curve ;;
-            cross-valid) ;;
+            cross-validation) cross_validation ;;
             self-training) self_training ;;
             co-training_align) co_training_ali ;;
             *)  $ML_FRAMEWORK_DIR/log.sh ERROR "Cannot recognize the type of an experiment: $exper_type" >&2;
