@@ -29,22 +29,20 @@ function cross_validation() {
     wait_for_jobs "$run_dir/done.*" $i
     
     ############################ Collecting statistics #########################
+
+    # all numbers
+    mkdir -p $run_dir/result
+    cat $run_dir/*_iter/result/train.data.*.res > $run_dir/result/train.data.res
+    cat $run_dir/*_iter/result/test.data.*.res > $run_dir/result/test.data.res
+# TODO so far only multiline (ranking) format supported
+    cat $run_dir/result/train.data.res | $ML_FRAMEWORK_DIR/scripts/results_to_triples.pl --ranking | $ML_FRAMEWORK_DIR/scripts/eval.pl --prf --acc >> $run_dir/stats.numbers
+    cat $run_dir/result/test.data.res | $ML_FRAMEWORK_DIR/scripts/results_to_triples.pl --ranking | $ML_FRAMEWORK_DIR/scripts/eval.pl --prf --acc >> $run_dir/stats.numbers
     
-#cat $(TTE_DIR)/result/train.$(DATA_SOURCE).cv_out_[0-9][0-9].$(ML_ID).res > $(TTE_DIR)/result/train.$(DATA_SOURCE).out.$(ML_ID).res; \
-#	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).out.$(ML_ID).res | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG) >> $(STATS_FILE); \
-#	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).cv_in_[0-9][0-9].$(ML_ID).res > $(TTE_DIR)/result/train.$(DATA_SOURCE).in.$(ML_ID).res; \
-#	cat $(TTE_DIR)/result/train.$(DATA_SOURCE).in.$(ML_ID).res | scripts/results_to_triples.pl $(RANK_FLAG) | $(SCRIPT_DIR)/eval.pl $(RANK_EVAL_FLAG) >> $(STATS_FILE); \
-#	touch $(TTE_DIR)/done.$(ML_ID)
-   
-#    # all numbers
-#    paste $run_dir/*_sample_*/stats >> $run_dir/stats.numbers
-#    
-#    # a header used for sample results
-#    echo "TRAIN_SAMPLE" > $run_dir/stats.header
-#    print_header $run_dir/stats.numbers "TRAIN" "TEST" >> $run_dir/stats.header
-#    
-#    echo -e "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
-#    paste $run_dir/stats.header $run_dir/stats.numbers >> $run_dir/stats
-#    sed -i 's/$/|/' $run_dir/stats
-#    rm $run_dir/stats.header $run_dir/stats.numbers
+    print_header $run_dir/stats.numbers "TRAIN_DATA" "TEST_DATA" >> $run_dir/stats.header
+
+    # printing the results
+    echo -e "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
+    paste $run_dir/stats.header $run_dir/stats.numbers >> $run_dir/stats
+    rm $run_dir/stats.header $run_dir/stats.numbers
+    
 }
