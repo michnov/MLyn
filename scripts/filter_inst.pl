@@ -5,8 +5,8 @@ use warnings;
 
 use Getopt::Long;
 
-my $in = '';
-my $out = '';
+my $in = undef;
+my $out = undef;
 my $multiline = 0;
 my $n = undef;
 
