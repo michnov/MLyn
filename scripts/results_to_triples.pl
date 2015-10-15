@@ -53,3 +53,43 @@ while (my $line = <STDIN>) {
         print "\n";
     }
 }
+
+__END__
+
+=encoding utf-8
+
+=head1 NAME 
+
+results_to_triples.pl
+
+=head1 DESCRIPTION
+
+TODO this should be explained and reformulated
+
+Transforms a result file produced by ML Framework to a format, where each instance is represented by a tab-separated triple on a single line.
+For ranking tasks, especially, it reduces multiline format of results to a single line per instance.
+
+The input format consists of two columns, predicted label and true labels. The true labels are separated by comma, if there is more than one.
+Moreover, the whole true labels string can be followed by information, for which label precision, recall and f-score will be calculated (such
+label will be denoted as "focused"). This information is separated by a hyphen from the rest.
+
+Regarding the output format, the three items of each triple represent:
+1) a number of 
+
+=head1 PARAMETERS
+
+=over
+
+=item C<--ranking>
+
+A flag indicating that a multiline input format is expected.
+
+=head1 AUTHORS
+
+Michal Novák <mnovak@ufal.mff.cuni.cz>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright © 2014 by Institute of Formal and Applied Linguistics, Charles University in Prague
+
+This module is free software; you can redistribute it and/or modify it under the same terms as Perl itself.
