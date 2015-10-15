@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 use Getopt::Long;
+use List::Util qw/min/;
 use List::MoreUtils qw/any/;
 
 my $ranking;
@@ -18,13 +19,14 @@ while (my $line = <STDIN>) {
 # TODO non-ranking adjusted to return (0, 0, 1) if we correctly guess other than a specified class
     if ($ranking) {
         if ($line =~ /^\s*$/) {
-            my ($pred_idx, @other_idx) = sort {$pred_costs{$a} <=> $pred_costs{$b}} keys %pred_costs;
+            my $min = min values %pred_costs;
+            my @pred_idx = grep {$pred_costs{$_} == $min} keys %pred_costs;
             my $true_count = scalar @true_idx;
-            my $pred_count = 1;
-            my $both_count = (any {$_ == $pred_idx} @true_idx) ? 1 : 0;
+            my $pred_count = scalar @pred_idx;
+            my $both_count = scalar (grep {my $idx = $_; any {$_ == $idx} @true_idx} @pred_idx);
             if (defined $self_idx) {
                 $true_count = 0 if (any {$_ == $self_idx} @true_idx);
-                $pred_count = 0 if ($pred_idx == $self_idx);
+                $pred_count = 0 if (any {$_ == $self_idx} @pred_idx);
                 $both_count = 0 if (!$true_count && !$pred_count); 
             }
             print join " ", ($true_count, $pred_count, $both_count);
