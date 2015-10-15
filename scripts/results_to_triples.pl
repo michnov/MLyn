@@ -27,7 +27,7 @@ while (my $line = <STDIN>) {
             if (defined $self_idx) {
                 $true_count = 0 if (any {$_ == $self_idx} @true_idx);
                 $pred_count = 0 if (any {$_ == $self_idx} @pred_idx);
-                $both_count = 0 if (!$true_count && !$pred_count); 
+                $both_count = 1 if (!$true_count && !$pred_count); 
             }
             print join " ", ($true_count, $pred_count, $both_count);
             print "\n";
