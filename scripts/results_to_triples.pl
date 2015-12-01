@@ -33,7 +33,7 @@ while (my $line = <STDIN>) {
             print "\n";
             %pred_costs = (); @true_idx = (); $self_idx = undef;
         }
-        else {
+        elsif ($line =~ /^\d+:-?\d+\.\d+ \d+-\d+$/) {
             my ($pred_str, $true_str) = split / /, $line;
             my ($pred_idx, $pred_cost) = split /:/, $pred_str;
             $pred_costs{$pred_idx} = $pred_cost;
