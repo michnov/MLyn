@@ -2,6 +2,11 @@
 
 use strict;
 use warnings;
+use Getopt::Long;
+use List::Util qw/sum/;
+
+my $to_log = 0;
+GetOptions("log" => \$to_log);
 
 my $res_file = $ARGV[0];
 open my $res_fh, "<", $res_file;
@@ -12,6 +17,10 @@ while (my $line = <$res_fh>) {
     chomp $line;
     if ($line =~ /^\s*$/) {
         if (%$curr_res) {
+            if (!$to_log) {
+                my $exp_sum = sum(map {exp($_)} values %$curr_res);
+                $curr_res = { map {$_ => sprintf "%.5f", exp($curr_res->{$_}) / $exp_sum} keys %$curr_res };
+            }
             push @results, $curr_res;
             $curr_res = {};
         }
