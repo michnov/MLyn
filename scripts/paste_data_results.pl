@@ -24,12 +24,18 @@ while (my $line = <$res_fh>) {
 }
 close $res_fh;
 
+my $instance_num = 0;
+
 $curr_res = shift @results;
 while (my $line = <STDIN>) {
     chomp $line;
     if ($line =~ /^\s*$/) {
         print "\n";
         $curr_res = shift @results;
+        $instance_num++;
+        if ($instance_num % 100000 == 0) {
+            print STDERR "Processing instane no. $instance_num\n";
+        }
         next;
     }
     my ($first, @rest) = split / /, $line;
