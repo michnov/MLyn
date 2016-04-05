@@ -1,0 +1,5 @@
+- presun do vlastneho GitHub repozitara
+- precistit stare nepouzivane subory
+- na konci vypisat cestu k modelu s najlepsimi vysledkami na DEV_DATA
+- v HTML vypise schovat EVAL cast a zobrazit ju iba na kliknutie
+- zrusit nutnost parametru '-f' v run.sh
