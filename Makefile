@@ -218,7 +218,10 @@ $(TTE_DIR)/all.acc :
 		ml_id=$$ml_method.$$ml_params_hash; \
 		mkdir -p $(TTE_DIR)/log/$$ml_id; \
 		if [ $(SEMI_SUP) = 'self_training' ]; then \
-# TODO self-training
+			echo "TODO self-training"; \
+		elif [ $(SEMI_SUP) = 'co_training_ali' ]; then \
+			qsubmit --jobname="tte.co_tr_ali.$$ml_id" --mem="1g" --priority="-20" --logdir="$(TTE_DIR)/log/$$ml_id" \
+				"make co_training_ali DATA_SOURCE_1=$(DATA_SOURCE_1) DATA_SOURCE_2=$(DATA_SOURCE_2) SEMI_SUP_ITER=1 DATA_DIR_1=$(DATA_DIR_1) DATA_DIR_2=$(DATA_DIR_2) RANKING=$(RANKING) ML_METHOD=$$ml_method ML_PARAMS=\"$$ml_params\" FEAT_LIST=$(FEAT_LIST) TTE_DIR=$(TTE_DIR) STATS_FILE=$(TTE_DIR)/acc.$$iter.$$ml_id;"; \
 		elif [ $(CROSS_VALID_N) -gt 0 ]; then \
 			qsubmit --jobname="tte.cv.$$ml_id" --mem="1g" --priority="-20" --logdir="$(TTE_DIR)/log/$$ml_id" \
 				"make -s cross_eval CROSS_VALID_N=$(CROSS_VALID_N) DATA_SOURCE=$(DATA_SOURCE) RANKING=$(RANKING) ML_METHOD=$$ml_method ML_PARAMS=\"$$ml_params\" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_DIR) STATS_FILE=$(TTE_DIR)/acc.$$iter.$$ml_id;"; \
@@ -251,7 +254,7 @@ $(TTE_FEATS_DIR)/all.acc :
 		feat_descr=`echo "$$i" | sed 's/^[^#]*#//' | sed 's/__WS__/ /g'`; \
 		featsha=`echo "$$feat_list" | shasum | cut -c 1-10`; \
 		qsubmit --jobname="tte_feats.$$featsha" --mem="1g" --priority="-50" --logdir="$(TTE_FEATS_DIR)/log/$$featsha" \
-			"make -s tte RANKING=$(RANKING) CROSS_VALID_N=$(CROSS_VALID_N) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(TEST_DATA_NAME) DATA_SOURCE=$(DATA_SOURCE) STATS_FILE=$(TTE_FEATS_DIR)/acc.$$iter.$$featsha DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_FEATS_DIR)/$$featsha FEAT_LIST=$$feat_list FEAT_DESCR=\"$$feat_descr\"; \
+			"make -s tte SEMI_SUP=$(SEMI_SUP) DATA_SOURCE_1=$(DATA_SOURCE_1) DATA_SOURCE_2=$(DATA_SOURCE_2) DATA_DIR_1=$(DATA_DIR_1) DATA_DIR_2=$(DATA_DIR_2) RANKING=$(RANKING) CROSS_VALID_N=$(CROSS_VALID_N) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(TEST_DATA_NAME) DATA_SOURCE=$(DATA_SOURCE) STATS_FILE=$(TTE_FEATS_DIR)/acc.$$iter.$$featsha DATA_DIR=$(DATA_DIR) TTE_DIR=$(TTE_FEATS_DIR)/$$featsha FEAT_LIST=$$feat_list FEAT_DESCR=\"$$feat_descr\"; \
 			touch $(TTE_FEATS_DIR)/done.$$featsha;"; \
 		sleep 30; \
 	done; \
@@ -315,6 +318,39 @@ self_training :
 		make -s eval DATA_SOURCE=$(DATA_SOURCE) TRAIN_DATA_NAME=new_train TEST_DATA_NAME=$(TRAIN_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(ST_DIR)/data/$$iter MODEL_DIR=$(ST_DIR)/model/$$iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID) >> $(ST_DIR)/acc.$$iter.$(ML_ID); \
 		make -s eval DATA_SOURCE=$(DATA_SOURCE) TRAIN_DATA_NAME=new_train TEST_DATA_NAME=$(TEST_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(ST_DIR)/data/$$iter MODEL_DIR=$(ST_DIR)/model/$$iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID) >> $(ST_DIR)/acc.$$iter.$(ML_ID); \
 	done
+
+#--------------------------------- Co-training on unlabeled data for two word-aligned languages -------------------------------------
+
+#DATA_SOURCE_1=pcedt.en.analysed
+#DATA_SOURCE_2=pdt.cs.analysed
+UNLABELED_SET_1 = $(DATA_DIR_1)/$(UNLABELED_DATA_NAME).$(DATA_SOURCE_1).idx.table
+UNLABELED_SET_2 = $(DATA_DIR_2)/$(UNLABELED_DATA_NAME).$(DATA_SOURCE_2).idx.table
+
+co_training_ali :
+	i=0; \
+	iter=`printf "%03d" $$i`; \
+	mkdir -p $(ST_DIR)/model/$$iter; \
+	mkdir -p $(ST_DIR)/result/$$iter; \
+	mkdir -p $(ST_DIR)/log/$$iter; \
+	make -s eval DATA_SOURCE=$(DATA_SOURCE_1) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(TRAIN_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR_1) MODEL_DIR=$(ST_DIR)/model/$$iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID) >> $(ST_DIR)/acc.$$iter.$(ML_ID); \
+	make -s eval DATA_SOURCE=$(DATA_SOURCE_1) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(TEST_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR_1) MODEL_DIR=$(ST_DIR)/model/$$iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID) >> $(ST_DIR)/acc.$$iter.$(ML_ID); \
+	make -s eval DATA_SOURCE=$(DATA_SOURCE_2) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(TRAIN_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR_2) MODEL_DIR=$(ST_DIR)/model/$$iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID) >> $(ST_DIR)/acc.$$iter.$(ML_ID); \
+	make -s eval DATA_SOURCE=$(DATA_SOURCE_2) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(TEST_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR_2) MODEL_DIR=$(ST_DIR)/model/$$iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID) >> $(ST_DIR)/acc.$$iter.$(ML_ID); \
+	for (( i=1; i<=$(SEMI_SUP_ITER); i++ )); do \
+		old_iter=$$iter; \
+		iter=`printf "%03d" $$i`; \
+		mkdir -p $(ST_DIR)/data/$$iter; \
+		mkdir -p $(ST_DIR)/model/$$iter; \
+		mkdir -p $(ST_DIR)/result/$$iter; \
+		mkdir -p $(ST_DIR)/log/$$iter; \
+		resolved_data_1=$(ST_DIR)/data/$$iter/resolved_unlabeled.$(DATA_SOURCE_1).table; \
+		make -s test DATA_SOURCE=$(DATA_SOURCE_1) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(UNLABELED_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR_1) MODEL_DIR=$(ST_DIR)/model/$$old_iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID); \
+		scripts/paste_data_results.sh $(UNLABELED_SET_1) $(ST_DIR)/result/$$iter/$(UNLABELED_DATA_NAME).$(DATA_SOURCE_1).$(ML_METHOD).$(ML_PARAMS_HASH).res | scripts/filter_by_loss.pl $(MAX_LOSS) | scripts/discretize_losses.pl | gzip -c > $$resolved_data_1; \
+		resolved_data_2=$(ST_DIR)/data/$$iter/resolved_unlabeled.$(DATA_SOURCE_2).table; \
+		make -s test DATA_SOURCE=$(DATA_SOURCE_2) TRAIN_DATA_NAME=$(TRAIN_DATA_NAME) TEST_DATA_NAME=$(UNLABELED_DATA_NAME) RANKING=$(RANKING) ML_METHOD=$(ML_METHOD) ML_PARAMS="$(ML_PARAMS)" FEAT_LIST=$(FEAT_LIST) DATA_DIR=$(DATA_DIR_2) MODEL_DIR=$(ST_DIR)/model/$$old_iter RESULT_DIR=$(ST_DIR)/result/$$iter QSUB_LOG_DIR=$(ST_DIR)/log/$$iter/$(ML_ID); \
+		scripts/paste_data_results.sh $(UNLABELED_SET_2) $(ST_DIR)/result/$$iter/$(UNLABELED_DATA_NAME).$(DATA_SOURCE_2).$(ML_METHOD).$(ML_PARAMS_HASH).res | scripts/filter_by_loss.pl $(MAX_LOSS) | scripts/discretize_losses.pl | gzip -c > $$resolved_data_2; \
+	done
+
 
 publish_results_html :
 	scp $(STATS_FILE).html mnovak@ufal:/home/mnovak/public_html/data/it_transl_res.html
