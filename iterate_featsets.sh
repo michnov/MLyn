@@ -107,7 +107,7 @@ function run_on_featset {
                         IN_FILE=$orig_file \
                         OUT_FILE=$filt_file; \
                      touch $tmp_dir/$iter.done;" \
-                    "preproc.$iter" -50 $tmp_dir/log 0
+                    "preproc.$iter" 0 $tmp_dir/log 0
                 ((i++))
             fi
         done
