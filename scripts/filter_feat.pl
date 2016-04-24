@@ -44,27 +44,29 @@ while ( my ($feats, @rest) = Treex::Tool::ML::VowpalWabbit::Util::parse_singleli
     my @curr_ns_feats = ();
     my $has_empty_ns = 0;
     foreach my $feat (@$feats) {
+        #print STDERR $feat->[0]."\n";
         if ($feat->[0] =~ /^\|/) {
-            if ($curr_ns) {
-                if (!@curr_ns_feats) {
-                    $has_empty_ns = 1;
-                    last;
+                #print STDERR Dumper(\@curr_ns_feats);
+                if (@curr_ns_feats) {
+                    if ($curr_ns) {
+                        push @filt_feats, [$curr_ns, undef];
+                    }
+                    push @filt_feats, @curr_ns_feats;
+                    @curr_ns_feats = ();
                 }
-                push @filt_feats, [$curr_ns], @curr_ns_feats;
-                @curr_ns_feats = ();
-            }
-            $curr_ns = $feat->[0];
+                $curr_ns = $feat->[0];
         }
         elsif ($print xor $hash{$feat->[0]}) {
             push @curr_ns_feats, $feat;
         }
     }
-    if (!@curr_ns_feats) {
-        $has_empty_ns = 1;
+    if (@curr_ns_feats) {
+        if ($curr_ns) {
+            push @filt_feats, [$curr_ns, undef];
+        }
+        push @filt_feats, @curr_ns_feats;
     }
-    next if ($has_empty_ns);
-    push @filt_feats, [$curr_ns], @curr_ns_feats;
-    @curr_ns_feats = ();
+    next if (!@filt_feats);
     
     my $str = Treex::Tool::ML::VowpalWabbit::Util::format_singleline(\@filt_feats, @rest);
     print $str;
