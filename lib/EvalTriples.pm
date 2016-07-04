@@ -11,55 +11,75 @@ sub acc {
 }
 
 sub prf {
-    my ($true, $pred, $both) = @_;
-    my $p = $pred != 0 ? $both / $pred : 0;
-    my $r = $true != 0 ? $both / $true : 0;
+    my ($rec_num, $rec_denom, $prec_num, $prec_denom) = @_;
+    my $p = $prec_denom != 0 ? $prec_num / $prec_denom : 0;
+    my $r = $rec_denom != 0 ? $rec_num / $rec_denom : 0;
     my $f = $p + $r != 0 ? 2 * $p * $r / ($p + $r) : 0;
     return ($p, $r, $f);
 }
 
 sub acc_strict {
     my ($true, $pred, $both) = @_;
-    return 0 if ($both == 0);
-    return 1 if (($true == $pred) && ($true == 0));
-    return 1 if (($true == $pred) && ($true == $both));
+    return 1 if (($true == 0) && ($pred == 0));
+    return 0 if (($true > 0) && ($pred == 0) && ($both != $true));
+    return 0 if (($true == 0) && ($pred > 0) && ($both != $pred));
+    return 1 if (($true == 0) && ($pred > 0) && ($both == $pred));
+    return 1 if (($true > 0) && ($pred == 0) && ($both == $true));
+    return 1 if (($true > 0) && ($true == $pred) && ($true == $both));
     return 0;
 }
 
 sub acc_lenient {
     my ($true, $pred, $both) = @_;
-    return 0 if ($both == 0);
-    return 1 if (($true == $pred) && ($true == 0));
-    return 1 if (($true > 0) && ($pred > 0) && ($both > 0));
+    return 1 if (($true == 0) && ($pred == $true) && ($both == $true));
+    return 1 if ($both > 0);
     return 0;
 }
 
 sub acc_weighted {
     my ($true, $pred, $both) = @_;
-    return 0 if ($both == 0);
-    return 1 if (($true == $pred) && ($true == 0));
-    my ($p, $r, $f) = prf($true, $pred, $both);
+    my ($p, $r, $f);
+    
+    return 1 if (($true == 0) && ($pred == 0));
+    
+    ($p, $r, $f) = prf($both, $true, $both, $true);
+    return $f if (($true > 0) && ($pred == 0));
+    
+    ($p, $r, $f) = prf($both, $pred, $both, $pred);
+    return 1 if (($true == 0) && ($pred > 0));
+    
+    ($p, $r, $f) = prf($both, $true, $both, $pred);
     return $f;
 }
 
 sub prf_strict {
     my ($true, $pred, $both) = @_;
-    return (0, 0, 0) if (($true == 0) && ($pred == 0));
-    return (1, 1, 1) if (($true == $pred) && ($true == $both));
-    return (map {$_ > 0 ? 1 : 0} ($true, $pred), 0);
+    return (0, 0, 0, 0) if (($true == 0) && ($pred == 0));
+    return (0, 1, 0, 0) if (($true > 0) && ($pred == 0) && ($both != $true));
+    return (0, 0, 0, 1) if (($true == 0) && ($pred > 0) && ($both != $pred));
+    return (0, 0, 1, 1) if (($true == 0) && ($pred > 0) && ($both == $pred));
+    return (1, 1, 0, 0) if (($true > 0) && ($pred == 0) && ($both == $true));
+    return (1, 1, 1, 1) if (($true > 0) && ($true == $pred) && ($true == $both));
+    return (0, 1, 0, 1);
 }
 
 sub prf_lenient {
     my ($true, $pred, $both) = @_;
-    return (0, 0, 0) if (($true == 0) && ($pred == 0));
-    return (1, 1, 1) if ($both > 0);
-    return (map {$_ > 0} ($true, $pred), 0);
+    return (0, 0, 0, 0) if (($true == 0) && ($pred == 0));
+    return (0, 1, 0, 0) if (($true > 0) && ($pred == 0) && ($both == 0));
+    return (0, 0, 0, 1) if (($true == 0) && ($pred > 0) && ($both == 0));
+    return (0, 0, 1, 1) if (($true == 0) && ($pred > 0) && ($both > 0));
+    return (1, 1, 0, 0) if (($true > 0) && ($pred == 0) && ($both > 0));
+    return (0, 1, 0, 1) if (($true > 0) && ($pred > 0) && ($both == 0));
+    return (1, 1, 1, 1) if (($true > 0) && ($pred > 0) && ($both > 0));
 }
 
 sub prf_weighted {
     my ($true, $pred, $both) = @_;
-    return (0, 0, 0) if (($true == 0) && ($pred == 0));
-    return ($true, $pred, $both);
+    return (0, 0, 0, 0) if (($true == 0) && ($pred == 0));
+    return (0, 0, $both, $pred) if (($true == 0) && ($pred > 0));
+    return ($both, $true, 0, 0) if (($true > 0) && ($pred == 0));
+    return ($both, $true, $both, $pred);
 }
 
 sub update_acc {
@@ -69,10 +89,11 @@ sub update_acc {
 }
 
 sub update_prf {
-    my ($true, $pred, $both, $acc_counts) = @_;
-    $acc_counts->{true} += $true;
-    $acc_counts->{pred} += $pred;
-    $acc_counts->{both} += $both;
+    my ($rec_num, $rec_denom, $prec_num, $prec_denom, $acc_counts) = @_;
+    $acc_counts->{rec_num}    += $rec_num;
+    $acc_counts->{rec_denom}  += $rec_denom;
+    $acc_counts->{prec_num}   += $prec_num;
+    $acc_counts->{prec_denom} += $prec_denom;
 }
 
 sub eval {
@@ -123,30 +144,33 @@ sub eval {
     }
     if ($args->{prf}) {
         if ($args->{strict}) {
-            my ($p, $r, $f) = prf($prf_strict_counts{true}, $prf_strict_counts{pred}, $prf_strict_counts{both});
+            my ($p, $r, $f) = prf($prf_strict_counts{rec_num}, $prf_strict_counts{rec_denom}, $prf_strict_counts{prec_num}, $prf_strict_counts{prec_denom});
             $stats{prf}{strict} = [
                 $p, $r, $f,
-                $prf_strict_counts{true},
-                $prf_strict_counts{pred},
-                $prf_strict_counts{both},
+                $prf_strict_counts{rec_num},
+                $prf_strict_counts{rec_denom},
+                $prf_strict_counts{prec_num},
+                $prf_strict_counts{prec_denom},
             ];
         }
         if ($args->{lenient}) {
-            my ($p, $r, $f) = prf($prf_lenient_counts{true}, $prf_lenient_counts{pred}, $prf_lenient_counts{both});
+            my ($p, $r, $f) = prf($prf_lenient_counts{rec_num}, $prf_lenient_counts{rec_denom}, $prf_lenient_counts{prec_num}, $prf_lenient_counts{prec_denom});
             $stats{prf}{lenient} = [
                 $p, $r, $f,
-                $prf_lenient_counts{true},
-                $prf_lenient_counts{pred},
-                $prf_lenient_counts{both},
+                $prf_lenient_counts{rec_num},
+                $prf_lenient_counts{rec_denom},
+                $prf_lenient_counts{prec_num},
+                $prf_lenient_counts{prec_denom},
             ];
         }
         if ($args->{weighted}) {
-            my ($p, $r, $f) = prf($prf_weighted_counts{true}, $prf_weighted_counts{pred}, $prf_weighted_counts{both});
+            my ($p, $r, $f) = prf($prf_weighted_counts{rec_num}, $prf_weighted_counts{rec_denom}, $prf_weighted_counts{prec_num}, $prf_weighted_counts{prec_denom});
             $stats{prf}{weighted} = [
                 $p, $r, $f,
-                $prf_weighted_counts{true},
-                $prf_weighted_counts{pred},
-                $prf_weighted_counts{both},
+                $prf_weighted_counts{rec_num},
+                $prf_weighted_counts{rec_denom},
+                $prf_weighted_counts{prec_num},
+                $prf_weighted_counts{prec_denom},
             ];
         }
     }
@@ -180,10 +204,10 @@ sub format_stats {
     }
     if (defined $stats->{prf}) {
         foreach my $style (keys %{$stats->{prf}}) {
-            my ($p, $r, $f, $ct, $cp, $cb) = @{$stats->{prf}{$style}};
+            my ($p, $r, $f, $rn, $rd, $pn, $pd) = @{$stats->{prf}{$style}};
             $formatted_stats->{prf}{$style} = [
-                _format_perc($p), _format_ratio($cb, $cp),
-                _format_perc($r), _format_ratio($cb, $ct),
+                _format_perc($p), _format_ratio($pn, $pd),
+                _format_perc($r), _format_ratio($rn, $rd),
                 _format_perc($f),
             ];
         }
