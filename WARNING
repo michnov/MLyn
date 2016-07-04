@@ -1,0 +1,2 @@
+- the evaluation scores for all the MLyn runs executed before 5.7.2016 are incorrect
+    - a bug concerning instances with multiple correct cands was found in VW results to triples transformation script (scripts/results_to_triples.pl)
