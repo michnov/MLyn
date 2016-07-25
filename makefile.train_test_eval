@@ -104,7 +104,7 @@ $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.model         : $(TRAIN_DATA) | $(MODEL_DIR)
 	rm $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.$$$$.cache
 $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.model : $(TRAIN_DATA) | $(MODEL_DIR)
 	$(LOG_INFO) "Training a VW-csoaa_ldf (ranking) model: $^ => $@" >&2
-	zcat $^ | cut -f2 --complement | $(SCRIPT_DIR)/shared_to_nonshared.pl | $(VW_APP) -f $@ -b 20 \
+	zcat $^ | cut -f2 --complement | $(SCRIPT_DIR)/shared_to_nonshared.pl | $(VW_APP) -f $@ -b 27 \
 		--csoaa_ldf $(ML_PARAMS) \
 		--holdout_off \
 		-k --cache_file $(MODEL_DIR)/$(TRAIN_DATA_STEM).vw.ranking.$$$$.cache; \
