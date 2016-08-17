@@ -68,7 +68,8 @@ function prepare_run_dir()
     fi
     $ML_FRAMEWORK_DIR/log.sh DEBUG "DATE = "${params[DATE]}
     if [ -z ${params[RUN_DIR]} ]; then
-        run_base_dir=run_${params[DATE]}_$$
+        run_num=`ls ${params[TMP_DIR]} | grep "^[0-9]\{3\}_" | sort | tail -n1 | perl -we 'my ($l) = split /_/, <STDIN>; $l++; printf "%03d\n", $l;'`
+        run_base_dir="$run_num"_run_${params[DATE]}_$$
         if [ ! -z "${params[D]}" ]; then
             descr=`echo ${params[D]} | sed 's/[ \t]\+/_/g'`
             run_base_dir="$run_base_dir".$descr
