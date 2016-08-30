@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 use Getopt::Long;
-use List::Util qw/min/;
+use List::Util qw/max/;
 use List::MoreUtils qw/any/;
 
 my $ranking;
@@ -11,16 +11,17 @@ GetOptions(
     "ranking" => \$ranking,
 );
 
-my %pred_costs = ();
+my %pred_probs = ();
 my @true_idx = ();
 my $self_idx;
+my $curr_idx = 1;
 while (my $line = <STDIN>) {
     chomp $line;
 # TODO non-ranking adjusted to return (0, 0, 1) if we correctly guess other than a specified class
     if ($ranking) {
         if ($line =~ /^\s*$/) {
-            my $min = min values %pred_costs;
-            my @pred_idx = grep {$pred_costs{$_} == $min} keys %pred_costs;
+            my $max = max values %pred_probs;
+            my @pred_idx = grep {$pred_probs{$_} == $max} keys %pred_probs;
             my $true_count = scalar @true_idx;
             my $pred_count = scalar @pred_idx;
             my $both_count = scalar (grep {my $idx = $_; any {$_ == $idx} @true_idx} @pred_idx);
@@ -31,16 +32,16 @@ while (my $line = <STDIN>) {
             }
             print join " ", ($true_count, $pred_count, $both_count);
             print "\n";
-            %pred_costs = (); @true_idx = (); $self_idx = undef;
+            %pred_probs = (); @true_idx = (); $self_idx = undef; $curr_idx = 1;
         }
-        elsif ($line =~ /^\d+:-?\d+\.\d+ (\d|,)+-\d+$/) {
-            my ($pred_str, $true_str) = split / /, $line;
-            my ($pred_idx, $pred_cost) = split /:/, $pred_str;
-            $pred_costs{$pred_idx} = $pred_cost;
+        elsif ($line =~ /^[01]\.\d+ (\d|,)+-\d+$/) {
+            my ($pred_prob, $true_str) = split / /, $line;
+            $pred_probs{$curr_idx} = $pred_prob;
             if (!@true_idx) {
                 (my $true_idx_str, $self_idx) = split /-/, $true_str;
                 @true_idx = split /,/, $true_idx_str;
             }
+            $curr_idx++;
         }
     }
     else {
