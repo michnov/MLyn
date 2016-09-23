@@ -6,13 +6,18 @@ use Getopt::Long;
 use List::Util qw/sum/;
 
 my $to_log = 0;
-GetOptions("log" => \$to_log);
+my $in_probs = 0;
+GetOptions(
+    "log" => \$to_log,
+    "probs" => \$in_probs,
+);
 
 my $res_file = $ARGV[0];
 open my $res_fh, "<", $res_file;
 
 my @results = ();
 my $curr_res = {};
+my $idx = 1;
 while (my $line = <$res_fh>) {
     chomp $line;
     if ($line =~ /^\s*$/) {
@@ -21,14 +26,19 @@ while (my $line = <$res_fh>) {
                 my $exp_sum = sum(map {exp($_)} values %$curr_res);
                 $curr_res = { map {$_ => sprintf "%.5f", exp($curr_res->{$_}) / $exp_sum} keys %$curr_res };
             }
+            elsif ($in_probs) {
+                $curr_res = { map {$_ => 1 - $curr_res->{$_}} keys %$curr_res };
+            }
             push @results, $curr_res;
             $curr_res = {};
         }
+        $idx = 1;
     }
     else {
-        my ($idx_loss, $tag) = split / /, $line;
-        my ($idx, $loss) = split /:/, $idx_loss;
+        my ($loss, $tag) = split / /, $line;
+        $loss =~ s/^\d+://;
         $curr_res->{$idx} = $loss;
+        $idx++;
     }
 }
 close $res_fh;
