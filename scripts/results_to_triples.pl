@@ -5,6 +5,15 @@ use warnings;
 use Getopt::Long;
 use List::Util qw/max/;
 use List::MoreUtils qw/any/;
+use Scalar::Util qw/looks_like_number/;
+
+sub equals {
+    my ($a, $b) = @_;
+    if (looks_like_number($a) && looks_like_number($b)) {
+        return ($a == $b);
+    }
+    return ($a eq $b);
+}
 
 my $ranking;
 GetOptions(
@@ -51,7 +60,7 @@ while (my $line = <STDIN>) {
             print join " ", ($true_str == $fscore_label ? 1 : 0, $pred_str == $fscore_label ? 1 : 0, $pred_str == $true_str ? 1 : 0);
         }
         else {
-            print join " ", (1, 1, $pred_str == $true_str ? 1 : 0);
+            print join " ", (1, 1, equals($pred_str, $true_str) ? 1 : 0);
         }
         print "\n";
     }
