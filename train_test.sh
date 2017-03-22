@@ -39,4 +39,10 @@ function train_test() {
     echo -e "ML_METHOD:\t" ${params[ML_METHOD]} ${params[ML_PARAMS]} > $run_dir/stats
     paste $run_dir/stats.header $run_dir/stats.numbers >> $run_dir/stats
     rm $run_dir/stats.header $run_dir/stats.numbers
+        
+    # print model with its score
+    stats_lines_per_set=$(expr `cat $run_dir/stats | grep -v "ML_METHOD" | grep -P '^\s' | wc -l` / `echo "$test_data_names" | wc -w` + 1)
+    cat $run_dir/stats | grep -A$((stats_lines_per_set-1)) -P "DEV|TEST" | sed -n $stats_lines_per_set"p" | cut -f2  | cut -d' ' -f1 | tr -d '\n' >> $run_dir/best.model
+    echo -en '\t' >> $run_dir/best.model
+    readlink -f $run_dir/model/`ls $run_dir/model | head -n1` >> $run_dir/best.model
 }

@@ -70,6 +70,9 @@ function iterate_featsets()
         cat $run_subdir/info >> $stats
         cat $run_subdir/stats >> $stats
     done
+    
+    # find best model
+    cat $run_dir/*.featset/best.model | sort -k1,1 -n | tail -n1 > $run_dir/best.model
 }
 
 function run_on_featset {
