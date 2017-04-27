@@ -5,11 +5,12 @@ use warnings;
 use Getopt::Long;
 use List::Util qw/sum/;
 
-my $to_log = 0;
-my $in_probs = 0;
+# the input and output format of the scores
+my $from = "probs";     # losses
+my $to = "losses_0,1";  # probs | losses
 GetOptions(
-    "log" => \$to_log,
-    "probs" => \$in_probs,
+    "from=s" => \$from,
+    "to=s" => \$to,
 );
 
 my $res_file = $ARGV[0];
@@ -22,13 +23,22 @@ while (my $line = <$res_fh>) {
     chomp $line;
     if ($line =~ /^\s*$/) {
         if (%$curr_res) {
-            if (!$to_log) {
+            if ($from eq "losses" && $to eq "losses_0,1" ) {
                 my $exp_sum = sum(map {exp($_)} values %$curr_res);
                 $curr_res = { map {$_ => sprintf "%.5f", exp($curr_res->{$_}) / $exp_sum} keys %$curr_res };
             }
-            elsif ($in_probs) {
+            elsif ($from eq "losses" && $to eq "losses") {
+            }
+            elsif ($from eq "probs" && $to eq "losses_0,1") {
                 $curr_res = { map {$_ => 1 - $curr_res->{$_}} keys %$curr_res };
             }
+            elsif ($from eq "probs" && $to eq "probs") {
+            }
+            else {
+                print STDERR "Input/output format of scores not supported: $from -> $to\n";
+                exit 1;
+            }
+
             push @results, $curr_res;
             $curr_res = {};
         }
