@@ -8,6 +8,8 @@ use List::Util qw/sum/;
 use EvalTriples;
 use Statistics::Robust::Bootstrap;
 
+my $TYPE = "lenient";
+
 my $iter_count = 0;
 
 my $boot_alpha = 0.05;
@@ -17,6 +19,11 @@ GetOptions(
     "alpha=f" => \$boot_alpha,
     "n=i" => \$boot_n,
 );
+
+sub prf_count {
+    my ($true, $pred, $both) = @_;
+    return EvalTriples::prf_lenient($true, $pred, $both) if ($TYPE eq "lenient");
+}
 
 sub _get_lines {
     my ($path) = @_;
@@ -34,16 +41,18 @@ sub eval_results {
         print STDERR "Processed $iter_count samples.\n";
     }
 
-    my $all_pred1 = sum map {$_->{pred1}} @$results;
-    my $all_true1 = sum map {$_->{true1}} @$results;
-    my $all_both1 = sum map {$_->{both1}} @$results;
-    my ($p1, $r1, $f1) = EvalTriples::prf($all_true1, $all_pred1, $all_both1);
+    my $all_rec_num_1 = sum map {$_->[0]} @$results;
+    my $all_rec_denom_1 = sum map {$_->[1]} @$results;
+    my $all_prec_num_1 = sum map {$_->[2]} @$results;
+    my $all_prec_denom_1 = sum map {$_->[3]} @$results;
+    my ($p1, $r1, $f1) = EvalTriples::prf($all_rec_num_1, $all_rec_denom_1, $all_prec_num_1, $all_prec_denom_1);
 
-    if (defined $results->[0]->{pred2}) {
-        my $all_pred2 = sum map {$_->{pred2}} @$results;
-        my $all_true2 = sum map {$_->{true2}} @$results;
-        my $all_both2 = sum map {$_->{both2}} @$results;
-        my ($p2, $r2, $f2) = EvalTriples::prf($all_true2, $all_pred2, $all_both2);
+    if (defined $results->[0][4]) {
+        my $all_rec_num_2 = sum map {$_->[4]} @$results;
+        my $all_rec_denom_2 = sum map {$_->[5]} @$results;
+        my $all_prec_num_2 = sum map {$_->[6]} @$results;
+        my $all_prec_denom_2 = sum map {$_->[7]} @$results;
+        my ($p2, $r2, $f2) = EvalTriples::prf($all_rec_num_2, $all_rec_denom_2, $all_prec_num_2, $all_prec_denom_2);
 
         return ($f2 - $f1);
     }
@@ -54,21 +63,13 @@ sub _extract_from_res {
     my ($line1, $line2) = @_;
     chomp $line1;
     my ($true1, $pred1, $both1) = split / /, $line1;
-    my %res = (
-        pred1 => $pred1,
-        true1 => $true1,
-        both1 => $both1,
-    );
+    my @res = prf_count($true1, $pred1, $both1);
     if (defined $line2) {
         chomp $line2;
         my ($true2, $pred2, $both2) = split / /, $line2;
-        %res = ( %res,
-            pred2 => $pred2,
-            true2 => $true2,
-            both2 => $both2,
-        );
+        push @res, prf_count($true2, $pred2, $both2);
     }
-    return \%res;
+    return \@res;
 }
 
 my $USAGE = <<USAGE;
