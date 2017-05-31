@@ -77,5 +77,6 @@ function iterate_mlmethods() {
     sed -i 's/|$//' $run_dir/stats
 
     # find best model
-    cat $run_dir/*.mlmethod/best.model | sort -k1,1 -n | tail -n1 > $run_dir/best.model
+    cat $run_dir/*.mlmethod/best_f.model | sort -k1,1 -n | tail -n1 > $run_dir/best_f.model
+    cat $run_dir/*.mlmethod/best_acc.model | sort -k1,1 -n | tail -n1 > $run_dir/best_acc.model
 }

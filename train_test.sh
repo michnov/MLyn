@@ -42,7 +42,10 @@ function train_test() {
         
     # print model with its score
     stats_lines_per_set=$(expr `cat $run_dir/stats | grep -v "ML_METHOD" | grep -P '^\s' | wc -l` / `echo "$test_data_names" | wc -w` + 1)
-    cat $run_dir/stats | grep -A$((stats_lines_per_set-1)) -P "DEV|TEST" | sed -n $stats_lines_per_set"p" | cut -f2  | cut -d' ' -f1 | tr -d '\n' >> $run_dir/best.model
-    echo -en '\t' >> $run_dir/best.model
-    readlink -f $run_dir/model/`ls $run_dir/model | head -n1` >> $run_dir/best.model
+    cat $run_dir/stats | grep -A$((stats_lines_per_set-1)) -P "DEV|TEST" | sed -n $stats_lines_per_set"p" | cut -f2  | cut -d' ' -f1 | tr -d '\n' >> $run_dir/best_f.model
+    cat $run_dir/stats | grep -P "DEV|TEST" | cut -f2  | cut -d' ' -f1 | tr -d '\n' >> $run_dir/best_acc.model
+    echo -en '\t' >> $run_dir/best_f.model
+    echo -en '\t' >> $run_dir/best_acc.model
+    readlink -f $run_dir/model/`ls $run_dir/model | head -n1` >> $run_dir/best_f.model
+    readlink -f $run_dir/model/`ls $run_dir/model | head -n1` >> $run_dir/best_acc.model
 }
