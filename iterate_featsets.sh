@@ -56,7 +56,7 @@ function iterate_featsets()
                 FEAT_LIST=$feats \
                 RUN_DIR=$run_subdir; \
              touch $run_subdir/done;" \
-            "featset_exper.$feats_sha" -50 $run_subdir/log 30
+            "featset_exper.$feats_sha" -8 $run_subdir/log 30
     done
 
     # wait until all experiments are acomplished

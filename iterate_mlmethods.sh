@@ -55,7 +55,7 @@ function iterate_mlmethods() {
                 ML_METHOD=$ml_method \
                 ML_PARAMS='$ml_params'; \
                 touch $run_subdir/done;" \
-            "mlmethod_exper.$ml_method_sha" -20 $run_subdir/log 2
+            "mlmethod_exper.$ml_method_sha" -5 $run_subdir/log 2
     done
 
     # wait until all experiments are acomplished
