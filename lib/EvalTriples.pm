@@ -83,17 +83,23 @@ sub prf_weighted {
 }
 
 sub update_acc {
-    my ($ok, $acc_counts) = @_;
-    $acc_counts->{ok} += $ok;
-    $acc_counts->{all} += 1;
+    my ($ok, $acc_counts, $at_ref, $at_src) = @_;
+    if ($at_ref || $at_src) {
+        $acc_counts->{ok} += $ok;
+        $acc_counts->{all} += 1;
+    }
 }
 
 sub update_prf {
-    my ($rec_num, $rec_denom, $prec_num, $prec_denom, $acc_counts) = @_;
-    $acc_counts->{rec_num}    += $rec_num;
-    $acc_counts->{rec_denom}  += $rec_denom;
-    $acc_counts->{prec_num}   += $prec_num;
-    $acc_counts->{prec_denom} += $prec_denom;
+    my ($rec_num, $rec_denom, $prec_num, $prec_denom, $acc_counts, $at_ref, $at_src) = @_;
+    if ($at_ref) {
+        $acc_counts->{rec_num}    += $rec_num;
+        $acc_counts->{rec_denom}  += $rec_denom;
+    }
+    if ($at_src) {
+        $acc_counts->{prec_num}   += $prec_num;
+        $acc_counts->{prec_denom} += $prec_denom;
+    }
 }
 
 sub eval {
@@ -110,12 +116,25 @@ sub eval {
         chomp $line;
         my @score_counts = split / /, $line;
 
-        update_acc(acc_strict(@score_counts), \%acc_strict_counts);
-        update_acc(acc_lenient(@score_counts), \%acc_lenient_counts);
-        update_acc(acc_weighted(@score_counts), \%acc_weighted_counts);
-        update_prf(prf_strict(@score_counts), \%prf_strict_counts);
-        update_prf(prf_lenient(@score_counts), \%prf_lenient_counts);
-        update_prf(prf_weighted(@score_counts), \%prf_weighted_counts);
+        # the following filters out instances that do not satisfy the "anaphtype" regex
+        # anaphtype can be specified in two columns in the result table: starting with "AT_SRC:" or "AT_REF:"
+        # they are distinguished in PRF calculation: for P the scorer looks at "AT_SRC:" while it looks at "AT_REF:" for R
+        my $at_src = 1;
+        my $at_ref = 1;
+        if (defined $args->{anaphtype}) {
+            my $at = $args->{anaphtype};
+            my ($at_src_col) = grep {$_ =~ /^AT_SRC:/} @score_counts;
+            my ($at_ref_col) = grep {$_ =~ /^AT_REF:/} @score_counts;
+            $at_src = ( ($at_src_col // "") =~ /$at/ ) ? 1 : 0;
+            $at_ref = ( ($at_ref_col // "") =~ /$at/ ) ? 1 : 0;
+        }
+
+        update_acc(acc_strict(@score_counts), \%acc_strict_counts, $at_ref, $at_src);
+        update_acc(acc_lenient(@score_counts), \%acc_lenient_counts, $at_ref, $at_src);
+        update_acc(acc_weighted(@score_counts), \%acc_weighted_counts, $at_ref, $at_src);
+        update_prf(prf_strict(@score_counts), \%prf_strict_counts, $at_ref, $at_src);
+        update_prf(prf_lenient(@score_counts), \%prf_lenient_counts, $at_ref, $at_src);
+        update_prf(prf_weighted(@score_counts), \%prf_weighted_counts, $at_ref, $at_src);
     }
    
     my %stats = ();

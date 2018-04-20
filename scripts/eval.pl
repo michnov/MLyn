@@ -10,9 +10,11 @@ my $TYPE = "lenient";
 
 my $print_acc = 0;
 my $print_prf = 0;
+my $anaphtype = undef;
 GetOptions(
     "acc" => \$print_acc,
     "prf" => \$print_prf,
+    "anaphtype=s" => \$anaphtype,
 );
 $print_acc = 1 if (!$print_acc && !$print_prf);
 
@@ -20,7 +22,8 @@ my $args = {
     acc => $print_acc,
     prf => $print_prf,
     $TYPE => 1,
-    format => 1
+    format => 1,
+    anaphtype => $anaphtype,
 };
 my $stats = EvalTriples::eval(*STDIN, $args);
 
